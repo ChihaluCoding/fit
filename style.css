@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;400;700;800&family=Exo+2:wght@300;500;700&display=swap');
+
+:root { --p-blue: #0066ff; --bg: #f8fafc; }
+/* ベース文字サイズ（スマホで読みやすく） */
+html { font-size: 18px; }
+@media (min-width: 768px) { html { font-size: 16px; } }
+body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: #0f172a; transition: background 1s ease; }
+.font-outfit { font-family: 'Exo 2', sans-serif; letter-spacing: 0.04em; }
+
+/* Glassmorphism & Depth */
+.glass-card { background: rgba(255, 255, 255, 0.85); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,1); box-shadow: 0 20px 40px rgba(0,0,0,0.04); }
+.neo-inset { background: rgba(0,0,0,0.02); box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+.active-ring { border: 4px solid var(--p-blue); box-shadow: 0 0 20px rgba(0, 102, 255, 0.2); }
+
+/* XP Bar Animation */
+.xp-progress { transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); background: linear-gradient(90deg, #0066ff, #00d2ff); }
+.goal-progress { transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); background: linear-gradient(90deg, #22d3ee, #3b82f6); }
+.weight-up { color: #ef4444; }
+.weight-down { color: #22c55e; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* Visual Feedback */
+@keyframes ripple { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2); opacity: 0; } }
+.anim-ripple { position: absolute; border: 2px solid var(--p-blue); border-radius: 50%; animation: ripple 0.8s ease-out forwards; pointer-events: none; }
+
+.custom-scroll::-webkit-scrollbar { width: 4px; }
+.custom-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+
+/* 追加：文字サイズ極大化調整 */
+#timer { font-size: clamp(6rem, 15vw, 12rem) !important; font-weight: 600; }
+.stat-value { font-size: clamp(2.5rem, 6vw, 5rem) !important; font-weight: 600; }
+.stat-label { font-size: 1.2rem !important; font-weight: 600; letter-spacing: 0.2em; }
+.unit-label { font-size: 1rem !important; font-weight: 500; }
+.mode-title { font-size: 1.1rem !important; font-weight: 700; }
+.mode-bpm { font-size: 2rem !important; font-weight: 700; }
+
+/* ショップカード用のカスタムスタイルを定義して視認性を高める */
+.shop-item { border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 1.5rem; background: #f8fafc; display: flex; flex-direction: column; gap: 0.4rem; }
+.shop-item-title { font-size: 1.4rem; font-weight: 800; letter-spacing: 0.08em; }
+.shop-item-desc { font-size: 0.85rem; color: #94a3b8; letter-spacing: 0.12em; text-transform: uppercase; }
+.shop-item-button { margin-top: 0.5rem; padding: 0.85rem 1rem; border-radius: 1rem; background: #0f172a; color: #fff; font-weight: 800; letter-spacing: 0.25em; text-transform: uppercase; transition: background 0.2s ease; text-align: center; }
+.shop-item-button:not(:disabled):hover { background: #2563eb; }
+.shop-item-button:disabled { opacity: 0.4; cursor: not-allowed; }
+.shop-status { font-size: 0.85rem; font-weight: 800; letter-spacing: 0.3em; text-transform: uppercase; }
+.shop-message { font-size: 0.75rem; letter-spacing: 0.2em; }
+
+#levelIconWrapper { transition: background 0.6s ease; box-shadow: none; }
+.level-icon { width: 82%; height: 82%; border-radius: 9999px; object-fit: cover; border: 2px solid rgba(255,255,255,0.8); transition: transform 0.6s ease; }
+#levelIconWrapper:hover .level-icon { transform: scale(1.08); }
+.music-loop-active { border-color: #2563eb; color: #2563eb; box-shadow: 0 0 10px rgba(37,99,235,0.35); }

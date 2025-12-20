@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weight History | STRIDE-X</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen bg-slate-100 flex items-center justify-center p-6">
+    <div class="max-w-3xl w-full glass-card rounded-[2.5rem] p-10 space-y-6">
+        <div class="flex items-center justify-between">
+            <h1 class="font-outfit text-3xl font-black tracking-[0.3em] uppercase text-slate-800">Weight Calendar</h1>
+            <a href="index.html" class="px-4 py-2 rounded-2xl bg-slate-900 text-white text-xs font-black uppercase tracking-[0.3em] hover:bg-blue-600">Back</a>
+        </div>
+        <div class="flex items-center justify-between text-slate-500 font-bold uppercase tracking-[0.3em]">
+            <button id="prevMonth" class="px-3 py-2 rounded-2xl bg-slate-200 text-slate-600 text-xs hover:bg-slate-300">&lt;</button>
+            <span id="monthLabel"></span>
+            <button id="nextMonth" class="px-3 py-2 rounded-2xl bg-slate-200 text-slate-600 text-xs hover:bg-slate-300">&gt;</button>
+        </div>
+        <div id="historyList" class="grid grid-cols-7 gap-3"></div>
+        <small class="text-slate-400 uppercase tracking-[0.3em] block text-center">1か月分の体重推移を表示</small>
+    </div>
+
+    <script>
+        // カレンダー描画対象のコンテナを取得する
+        const container = document.getElementById('historyList');
+        // 月表示ラベルを取得する
+        const monthLabel = document.getElementById('monthLabel');
+        // 前月ボタンを取得する
+        const prevBtn = document.getElementById('prevMonth');
+        // 翌月ボタンを取得する
+        const nextBtn = document.getElementById('nextMonth');
+        // 体重ログを保持する配列を用意する
+        let logs = JSON.parse(localStorage.getItem('stridex_weight_logs')) || [];
+        // 日付キーと体重を紐付けるマップを保持する
+        let logMap = buildLogMap(logs);
+
+        // 表示対象の月を保持する
+        let currentDate = new Date();
+
+        // ログ配列から日付マップを作成する
+        function buildLogMap(sourceLogs) {
+            return sourceLogs.reduce((acc, log) => {
+                acc[log.date] = log.weight;
+                return acc;
+            }, {});
+        }
+
+        // 体重ログを保存して状態を更新する
+        function saveLogs(nextLogs) {
+            logs = nextLogs;
+            localStorage.setItem('stridex_weight_logs', JSON.stringify(logs));
+            logMap = buildLogMap(logs);
+        }
+
+        // 指定月のカレンダーを描画する
+        function renderCalendar(date) {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const start = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            const startWeekDay = start.getDay();
+            const monthName = start.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' });
+            monthLabel.textContent = monthName;
+
+            const cells = [];
+            for(let i = 0; i < startWeekDay; i++) {
+                cells.push('<div class="h-24 rounded-2xl bg-transparent"></div>');
+            }
+
+            for(let day = 1; day <= lastDay; day++) {
+                const dateObj = new Date(year, month, day);
+                const iso = dateObj.toISOString().split('T')[0];
+                const weight = logMap[iso];
+                const deleteButton = weight
+                    ? `<button type="button" data-delete-date="${iso}" class="text-[0.6rem] font-black uppercase tracking-[0.3em] text-rose-500 hover:text-rose-700">削除</button>`
+                    : '';
+                cells.push(`
+                    <div class="h-24 rounded-2xl bg-white border border-slate-100 flex flex-col justify-between p-3">
+                        <span class="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">${('0' + day).slice(-2)}</span>
+                        <span class="text-xl font-black ${weight ? 'text-slate-900' : 'text-slate-300'}">${weight ? weight + ' kg' : '--'}</span>
+                        ${deleteButton}
+                    </div>
+                `);
+            }
+
+            container.innerHTML = cells.join('');
+        }
+
+        // クリックされた削除ボタンの対象ログを削除する
+        container.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-delete-date]');
+            if(!button) return;
+            const dateKey = button.getAttribute('data-delete-date');
+            if(!dateKey) return;
+            const nextLogs = logs.filter(log => log.date !== dateKey);
+            saveLogs(nextLogs);
+            renderCalendar(currentDate);
+        });
+
+        // 前月ボタンで表示月を切り替える
+        prevBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar(currentDate);
+        });
+
+        // 翌月ボタンで表示月を切り替える
+        nextBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar(currentDate);
+        });
+
+        // 初期表示を描画する
+        renderCalendar(currentDate);
+    </script>
+</body>
+</html>

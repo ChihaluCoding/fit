@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRIDE-X INFINITY | プロフェッショナルOS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="p-4 md:p-8 flex justify-center min-h-screen">
+
+    <div class="max-w-6xl w-full space-y-6">
+        <header class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center px-2">
+            <div class="flex items-center gap-4">
+                <div id="levelIconWrapper" class="relative group cursor-help w-24 h-24 rounded-full bg-slate-900 flex items-center justify-center text-white text-3xl shadow-xl overflow-visible border-4 border-white">
+                        <img src="icon.jpg" alt="ユーザーアイコン" class="level-icon">
+                    <div class="absolute -bottom-1 -right-1 bg-blue-600 text-white text-xs font-black px-2 py-1 rounded border-2 border-white">LV.<span id="userLevel">1</span></div>
+                </div>
+                <div class="flex-1">
+                    <div class="flex justify-between text-xs font-black text-slate-400 uppercase tracking-widest mb-1">
+                        <span>Experience Points</span>
+                        <span id="xpText" class="text-sm">120 / 1000 XP</span>
+                    </div>
+                    <div class="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div id="xpBar" class="xp-progress h-full w-0"></div>
+                    </div>
+                    <div class="mt-2 text-xs font-bold text-blue-600 space-y-1">
+                        <p id="streakStatus">ストリーク未開始</p>
+                        <p id="weekBonusStatus" class="text-amber-500">今週のボーナス未達</p>
+                        <p id="monthBonusStatus" class="text-rose-500">月間ボーナス未達</p>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center">
+                <h1 class="font-outfit text-4xl font-900 tracking-tighter uppercase italic leading-none">Stride<span class="text-blue-600">X</span> Infinity</h1>
+                <p id="topStatus" class="text-xs font-bold text-slate-400 tracking-[0.4em] mt-2 uppercase">Advanced Performance OS</p>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button aria-label="Open shop" title="Open shop" onclick="Shop.toggle(true)" class="w-14 h-14 rounded-xl glass-card flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all text-2xl"><i class="fas fa-store"></i></button>
+                <button aria-label="Open settings" title="Open settings" onclick="Config.toggle()" class="w-14 h-14 rounded-xl glass-card flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all text-2xl"><i class="fas fa-cog"></i></button>
+                <button aria-label="Export session data" title="Export session data" onclick="System.export()" class="w-14 h-14 rounded-xl glass-card flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all text-2xl"><i class="fas fa-download"></i></button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-8 space-y-6">
+                <!-- 月間・年間の目標進捗を表示するカード -->
+                <div class="glass-card rounded-[2.5rem] p-8 space-y-6">
+                    <!-- 月間目標の進捗表示 -->
+                    <div>
+                        <!-- 月間目標の見出しと進捗値 -->
+                        <div class="flex items-center justify-between mb-3">
+                            <!-- 月間体重目標のタイトル -->
+                            <h3 class="text-base font-black text-slate-400 tracking-[0.2em] uppercase">Monthly Weight Goal</h3>
+                            <!-- 月間の進捗概要表示 -->
+                            <span id="monthGoalSummary" class="text-sm font-black text-slate-900">0.0 / 0.0 kg</span>
+                        </div>
+                        <!-- 月間の進捗ゲージ -->
+                        <div class="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <!-- 月間の進捗バー -->
+                            <div id="monthGoalProgressBar" class="goal-progress h-full w-0"></div>
+                        </div>
+                        <!-- 月間の進捗率表示 -->
+                        <p id="monthGoalPercent" class="text-xs font-bold text-slate-400 tracking-[0.3em] uppercase mt-3">0%</p>
+                    </div>
+                    <!-- 年間目標の進捗表示 -->
+                    <div>
+                        <!-- 年間目標の見出しと進捗値 -->
+                        <div class="flex items-center justify-between mb-3">
+                            <!-- 年間体重目標のタイトル -->
+                            <h3 class="text-base font-black text-slate-400 tracking-[0.2em] uppercase">Yearly Weight Goal</h3>
+                            <!-- 年間の進捗概要表示 -->
+                            <span id="yearGoalSummary" class="text-sm font-black text-slate-900">0.0 / 0.0 kg</span>
+                        </div>
+                        <!-- 年間の進捗ゲージ -->
+                        <div class="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <!-- 年間の進捗バー -->
+                            <div id="yearGoalProgressBar" class="goal-progress h-full w-0"></div>
+                        </div>
+                        <!-- 年間の進捗率表示 -->
+                        <p id="yearGoalPercent" class="text-xs font-bold text-slate-400 tracking-[0.3em] uppercase mt-3">0%</p>
+                    </div>
+                </div>
+                <div id="mainHub" class="glass-card rounded-[3.5rem] p-12 text-center relative overflow-hidden transition-all duration-500">
+                    <div class="flex justify-between items-center mb-10 px-6">
+                        <span id="metsLabel" class="bg-blue-50 text-blue-600 text-sm font-black px-5 py-2 rounded-full border border-blue-100 uppercase tracking-widest">8.8 METs</span>
+                        <span id="bestLabel" class="text-sm font-bold text-slate-400 uppercase tracking-widest">PB: <span id="pbVal" class="text-slate-900 font-black">0.0</span> kcal</span>
+                    </div>
+
+                    <div id="timer" class="font-outfit font-900 tracking-tighter text-slate-900 leading-none mb-12 select-none">00:00</div>
+
+                    <div class="grid grid-cols-3 gap-6 mb-16">
+                        <div>
+                            <p class="stat-label text-slate-400 uppercase mb-2">Energy</p>
+                            <p id="liveKcal" class="stat-value font-outfit text-blue-600 leading-none">0.0</p>
+                            <p class="unit-label text-slate-400 mt-2 uppercase">kcal</p>
+                        </div>
+                        <div class="border-x-2 border-slate-100 px-4">
+                            <p class="stat-label text-slate-400 uppercase mb-2">Rhythm</p>
+                            <p id="liveBpm" class="stat-value font-outfit leading-none">110</p>
+                            <p class="unit-label text-slate-400 mt-2 uppercase">bpm</p>
+                        </div>
+                        <div>
+                            <p class="stat-label text-slate-400 uppercase mb-2">Count</p>
+                            <p id="liveJumps" class="stat-value font-outfit leading-none">0</p>
+                            <p class="unit-label text-slate-400 mt-2 uppercase">jumps</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-8 items-center pb-4">
+                        <button aria-label="Reset session" title="Reset session" onclick="System.reset()" class="w-20 h-20 rounded-3xl border-2 border-slate-100 text-slate-300 flex items-center justify-center text-3xl transition-all hover:text-slate-900 hover:border-slate-300"><i class="fas fa-undo"></i></button>
+                        <button aria-label="Start or pause session" title="Start or pause session" onclick="System.toggle()" id="playBtn" class="w-32 h-32 rounded-[2.5rem] bg-slate-900 text-white flex items-center justify-center text-5xl shadow-2xl transition-all hover:scale-105 active:scale-95">
+                            <i id="playIcon" class="fas fa-play"></i>
+                        </button>
+                        <button aria-label="Voice status report" title="Voice status report" onclick="System.voiceReport()" class="w-20 h-20 rounded-3xl border-2 border-slate-100 text-slate-300 flex items-center justify-center text-3xl transition-all hover:text-blue-500 hover:border-blue-200"><i class="fas fa-comment-dots"></i></button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <button onclick="System.setMode(8.8, 110, this)" class="mode-btn glass-card p-6 rounded-3xl active-ring text-blue-600 font-bold transition-all">
+                        <span class="mode-title uppercase block mb-2">健康維持</span>
+                        <span class="font-outfit mode-bpm">110 BPM</span>
+                    </button>
+                    <button onclick="System.setMode(11.8, 140, this)" class="mode-btn glass-card p-6 rounded-3xl text-slate-400 font-bold transition-all">
+                        <span class="mode-title uppercase block mb-2">有酸素</span>
+                        <span class="font-outfit mode-bpm">140 BPM</span>
+                    </button>
+                    <button onclick="System.setMode(12.3, 160, this)" class="mode-btn glass-card p-6 rounded-3xl text-slate-400 font-bold transition-all">
+                        <span class="mode-title uppercase block mb-2">高強度</span>
+                        <span class="font-outfit mode-bpm">160 BPM</span>
+                    </button>
+                    <button onclick="System.setMode(15.9, 200, this)" class="mode-btn glass-card p-6 rounded-3xl text-slate-400 font-bold transition-all">
+                        <span class="mode-title uppercase block mb-2">プロ</span>
+                        <span class="font-outfit mode-bpm">200 BPM</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 space-y-6">
+                <div class="glass-card rounded-[2.5rem] p-8">
+                    <h3 class="text-base font-black text-slate-400 tracking-[0.2em] uppercase mb-6">Habit Tracker</h3>
+                    <div id="heatmap" class="grid grid-cols-7 gap-2"></div>
+                </div>
+
+                <div class="glass-card rounded-[2.5rem] p-8 space-y-6">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <!-- 1日の消費カロリー目標の見出し -->
+                            <h3 class="text-base font-black text-slate-400 tracking-[0.2em] uppercase">Daily Calorie Goal</h3>
+                            <!-- 1日の消費カロリー進捗サマリー -->
+                            <span id="goalSummary" class="text-sm font-black text-slate-900">0.0 / 0.0 kcal</span>
+                        </div>
+                        <div class="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div id="goalProgressBar" class="goal-progress h-full w-0"></div>
+                        </div>
+                        <!-- 1日の消費カロリー目標の進捗メッセージ -->
+                        <p id="goalMotivation" class="text-xs font-bold text-slate-400 tracking-[0.3em] uppercase mt-4">カロリー目標を設定してください</p>
+                    </div>
+                    <!-- 手動で消費カロリーを追加する折り畳みブロック -->
+                    <details class="group">
+                        <!-- 折り畳みの見出し行 -->
+                        <summary class="flex items-center justify-between cursor-pointer list-none select-none">
+                            <!-- 手動追加の見出し -->
+                            <h3 class="text-base font-black text-slate-400 tracking-[0.2em] uppercase">Manual Kcal</h3>
+                            <!-- 折り畳み状態のアイコン -->
+                            <span class="text-base font-black text-slate-400 transition-transform group-open:rotate-90">▶</span>
+                        </summary>
+                        <!-- 折り畳み内の入力フォーム -->
+                        <div class="mt-4">
+                            <!-- 入力欄と追加ボタンをまとめる -->
+                            <div class="relative">
+                                <!-- 音声読み上げ用の非表示ラベル -->
+                                <label for="manualKcalInput" class="sr-only">消費カロリーを手動入力</label>
+                                <!-- 手動追加の数値入力欄 -->
+                                <input type="number" id="manualKcalInput" class="w-full p-4 pr-28 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl" placeholder="50">
+                                <!-- 追加実行ボタン -->
+                                <button type="button" onclick="System.addManualKcal()" class="absolute right-2 top-2 bottom-2 px-5 rounded-xl bg-slate-900 text-white font-black uppercase tracking-widest text-xs hover:bg-blue-600 transition-all flex items-center justify-center">Add</button>
+                            </div>
+                            <!-- 補足説明テキスト -->
+                            <p class="text-xs font-bold text-slate-400 tracking-[0.3em] uppercase mt-3">ログに追加されます</p>
+                        </div>
+                    </details>
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-base font-black text-slate-400 tracking-[0.2em] uppercase">Weight Log</h3>
+                            <span id="weightChange" class="text-sm font-black tracking-[0.2em]">-</span>
+                        </div>
+                        <div class="relative">
+                            <label for="weightInput" class="sr-only">今日の体重を入力</label>
+                            <!-- 体重は小数点入力を許可するためにstepを設定する -->
+                            <input type="number" id="weightInput" step="0.1" class="w-full p-4 pr-28 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl" placeholder="65.0">
+                            <button onclick="System.saveWeight()" class="absolute right-2 top-2 bottom-2 px-5 rounded-xl bg-slate-900 text-white font-black uppercase tracking-widest text-xs hover:bg-blue-600 transition-all flex items-center justify-center">Log</button>
+                        </div>
+                        <div id="weightHistory" class="mt-4 space-y-2 text-sm font-bold text-slate-500">
+                            <div class="flex justify-between items-center bg-white/60 px-4 py-3 rounded-2xl">
+                                <div>
+                                    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Today</p>
+                                    <p id="weightToday" class="text-lg font-black text-slate-900">--</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Yesterday</p>
+                                    <p id="weightYesterday" class="text-lg font-black text-slate-900">--</p>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="weight-history.html" class="inline-flex items-center justify-center mt-3 px-4 py-2 rounded-xl bg-slate-200 text-slate-600 text-xs font-black uppercase tracking-[0.3em] hover:bg-slate-300">View History</a>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-[2.5rem] p-8 space-y-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-base font-black text-slate-400 tracking-[0.2em] uppercase">Focus Music</h3>
+                        <span id="musicNowPlaying" class="text-sm font-black text-slate-900">Loading...</span>
+                    </div>
+                    <label for="musicSelect" class="text-xs font-bold text-slate-400 uppercase tracking-[0.3em]">Playlist</label>
+                    <select id="musicSelect" class="w-full p-4 bg-slate-50 rounded-2xl font-black text-slate-600 outline-none" disabled>
+                        <option>Loading...</option>
+                    </select>
+                    <div class="flex items-center gap-3 pt-2 justify-center flex-wrap">
+                        <button type="button" aria-label="Play previous track" title="Play previous track" id="musicPrevBtn" class="w-14 h-14 rounded-2xl border-2 border-slate-200 text-slate-500 flex items-center justify-center text-xl hover:text-blue-600 hover:border-blue-200 transition-all"><i class="fas fa-backward"></i></button>
+                        <button type="button" aria-label="Play or pause music" title="Play or pause music" id="musicPlayBtn" class="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-2xl hover:bg-blue-600 transition-all"><i id="musicPlayIcon" class="fas fa-play"></i></button>
+                        <button type="button" aria-label="Play next track" title="Play next track" id="musicNextBtn" class="w-14 h-14 rounded-2xl border-2 border-slate-200 text-slate-500 flex items-center justify-center text-xl hover:text-blue-600 hover:border-blue-200 transition-all"><i class="fas fa-forward"></i></button>
+                        <button type="button" aria-label="Toggle loop playback" title="Toggle loop playback" id="musicLoopBtn" class="w-14 h-14 rounded-2xl border-2 border-slate-200 text-slate-500 flex items-center justify-center text-xl hover:text-blue-600 hover:border-blue-200 transition-all"><i class="fas fa-sync"></i></button>
+                    </div>
+                    <div class="space-y-3 pt-2">
+                        <div>
+                            <input type="range" id="musicSeek" min="0" max="100" value="0" class="w-full accent-blue-500">
+                            <div class="flex justify-between text-[0.65rem] font-bold text-slate-400 tracking-[0.3em] mt-1">
+                                <span id="musicCurrentTime">00:00</span>
+                                <span id="musicDuration">00:00</span>
+                            </div>
+                        </div>
+                        <label for="musicVolume" class="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] flex justify-between">
+                            <span>Volume</span>
+                            <span id="musicVolumeValue">70%</span>
+                        </label>
+                        <input type="range" id="musicVolume" min="0" max="100" value="70" class="w-full accent-blue-600">
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-[2.5rem] p-8 h-64 overflow-y-auto custom-scroll">
+                    <h3 class="text-base font-black text-slate-400 tracking-[0.2em] uppercase mb-6">Recent Sessions</h3>
+                    <div id="logArea" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsOverlay" class="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-xl hidden flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-lg rounded-[3rem] p-10 space-y-10 overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-center">
+                <h2 class="text-3xl font-900 font-outfit uppercase italic tracking-tighter">Settings</h2>
+                <button aria-label="Close settings" title="Close settings" onclick="Config.toggle()" class="w-12 h-12 rounded-full bg-slate-900 text-white text-xl flex items-center justify-center"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold text-slate-500">体重 (kg)</label>
+                        <!-- 設定の体重も小数点入力を許可する -->
+                        <input type="number" id="cfgWeight" step="0.1" value="65.0" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                    </div>
+                    <div class="space-y-2">
+                        <!-- 1日の消費カロリー目標のラベル -->
+                        <label class="text-sm font-bold text-slate-500">消費カロリー目標 (kcal)</label>
+                        <!-- 1日の消費カロリー目標は整数入力を想定する -->
+                        <input type="number" id="cfgDailyKcal" step="1" value="300" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                    </div>
+                </div>
+                <!-- 月間/年間の体重目標を個別に設定する -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <!-- 月間目標体重のラベル -->
+                        <label class="text-sm font-bold text-slate-500">月間目標体重 (kg)</label>
+                        <!-- 月間目標体重は小数点入力を許可する -->
+                        <input type="number" id="cfgMonthTarget" step="0.1" value="65.0" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                    </div>
+                    <div class="space-y-2">
+                        <!-- 年間目標体重のラベル -->
+                        <label class="text-sm font-bold text-slate-500">年間目標体重 (kg)</label>
+                        <!-- 年間目標体重は小数点入力を許可する -->
+                        <input type="number" id="cfgYearTarget" step="0.1" value="60.0" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                    </div>
+                </div>
+                <div class="flex items-center justify-between p-6 bg-slate-50 rounded-2xl">
+                    <span class="text-lg font-bold text-slate-800 italic">音声アシスタント</span>
+                    <input type="checkbox" id="cfgVoice" checked class="w-8 h-8 accent-blue-600">
+                </div>
+            </div>
+            <button onclick="Config.save()" class="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-widest hover:bg-blue-600 transition-all text-xl">Update System</button>
+        </div>
+    </div>
+
+    <div id="shopOverlay" class="fixed inset-0 z-[110] bg-slate-900/40 backdrop-blur-xl hidden flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-2xl rounded-[3rem] p-10 space-y-8 overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.4em]">STRIDEX MARKETPLACE</p>
+                    <h2 class="text-3xl font-900 font-outfit uppercase italic tracking-tighter mt-2">Boost Shop</h2>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="px-4 py-2 rounded-2xl bg-blue-50 text-blue-600 font-black tracking-[0.3em]" id="pointBalance">0 pts</div>
+                    <button id="shopCloseBtn" aria-label="Close shop" title="Close shop" class="w-12 h-12 rounded-full bg-slate-900 text-white text-xl flex items-center justify-center"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <p class="text-sm font-bold text-slate-500 leading-relaxed">セッション完了時に付与されるポイントで限定アイテムを購入できます。XPブーストを有効化して効率よくレベルアップしましょう。</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="shop-item">
+                    <div>
+                        <p class="shop-item-title text-slate-900">XPブースト</p>
+                        <p class="shop-item-desc">15分間XP獲得量が2倍</p>
+                    </div>
+                    <button id="boostPurchaseBtn" class="shop-item-button">購入 (200 pts)</button>
+                </div>
+                <div class="rounded-2xl border border-slate-200 p-6 bg-white/80 space-y-4">
+                    <p class="text-xs font-bold text-slate-400 tracking-[0.3em] uppercase">ステータス</p>
+                    <p id="boostStatus" class="shop-status text-blue-600">ブースト未適用</p>
+                    <p id="shopMessage" class="shop-message text-slate-500">ショップからの最新情報を表示します。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
