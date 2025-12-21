@@ -38,6 +38,21 @@ const System = {
             this.update(); // 表示を維持して一時停止状態を明確にする
         }
     },
+    finishSession() {
+        const icon = document.getElementById('playIcon'); // 再生アイコンを取得する
+        const btn = document.getElementById('playBtn'); // 再生ボタンを取得する
+        if(this.isRunning) {
+            this.isRunning = false; // 実行中フラグを停止状態に戻す
+            clearInterval(this.timer); // タイマーを停止する
+            clearInterval(this.rhythm); // リズムを停止する
+        }
+        if(icon) icon.className = 'fas fa-play'; // 表示を再生アイコンに戻す
+        if(btn) {
+            btn.classList.remove('active-ring'); // アクティブ表示を外す
+            btn.classList.replace('bg-blue-600', 'bg-slate-900'); // ボタン色を停止時に戻す
+        }
+        this.complete(); // セッションを完了して記録する
+    },
 
     setMode(mets, bpm, btn) {
         this.mets = mets; this.bpm = bpm;

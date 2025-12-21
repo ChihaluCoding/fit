@@ -114,7 +114,8 @@
                         <button aria-label="Start or pause session" title="Start or pause session" onclick="System.toggle()" id="playBtn" class="w-32 h-32 rounded-[2.5rem] bg-slate-900 text-white flex items-center justify-center text-5xl shadow-2xl transition-all hover:scale-105 active:scale-95">
                             <i id="playIcon" class="fas fa-play"></i>
                         </button>
-                        <button aria-label="Voice status report" title="Voice status report" onclick="System.voiceReport()" class="w-20 h-20 rounded-3xl border-2 border-slate-100 text-slate-300 flex items-center justify-center text-3xl transition-all hover:text-blue-500 hover:border-blue-200"><i class="fas fa-comment-dots"></i></button>
+                        <!-- セッションを完了して記録するボタン -->
+                        <button aria-label="Complete session" title="Complete session" onclick="System.finishSession()" class="w-20 h-20 rounded-3xl border-2 border-slate-100 text-slate-300 flex items-center justify-center text-3xl transition-all hover:text-green-500 hover:border-green-200"><i class="fas fa-check"></i></button>
                     </div>
                 </div>
 
