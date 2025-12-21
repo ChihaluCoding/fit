@@ -612,7 +612,8 @@ const System = {
         const monthCurrent = monthLogs.length > 0 ? parseFloat(monthLogs[monthLogs.length - 1].weight) : null; // 月間最新の体重を取得する
         const yearCurrent = yearLogs.length > 0 ? parseFloat(yearLogs[yearLogs.length - 1].weight) : null; // 年間最新の体重を取得する
         if(monthLogs.length === 0 || !monthTarget || monthBaseline === null || monthCurrent === null) {
-            monthSummary.innerText = "-- / -- kg"; // 当月ログが無い場合の表示にする
+            const targetLabel = monthTarget ? monthTarget.toFixed(1) : "--"; // 目標体重の表示値を用意する
+            monthSummary.innerText = `-- / ${targetLabel} kg`; // 現在体重は未記録のまま表示する
             monthBar.style.width = "0%"; // 月間バーを初期化する
             monthPercentEl.innerText = "0%"; // 月間達成率を初期化する
         } else {
@@ -622,7 +623,8 @@ const System = {
             monthPercentEl.innerText = `${Math.floor(monthProgress.percent)}%`; // 月間達成率を表示する
         }
         if(yearLogs.length === 0 || !yearTarget || yearBaseline === null || yearCurrent === null) {
-            yearSummary.innerText = "-- / -- kg"; // 当年ログが無い場合の表示にする
+            const targetLabel = yearTarget ? yearTarget.toFixed(1) : "--"; // 目標体重の表示値を用意する
+            yearSummary.innerText = `-- / ${targetLabel} kg`; // 現在体重は未記録のまま表示する
             yearBar.style.width = "0%"; // 年間バーを初期化する
             yearPercentEl.innerText = "0%"; // 年間達成率を初期化する
         } else {
