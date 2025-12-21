@@ -39,6 +39,10 @@
             </div>
             <div class="flex justify-end gap-3">
                 <button aria-label="Open shop" title="Open shop" onclick="Shop.toggle(true)" class="w-14 h-14 rounded-xl glass-card flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all text-2xl"><i class="fas fa-store"></i></button>
+                <!-- 年間履歴ページへ移動するボタン -->
+                <a aria-label="Open yearly history" title="Open yearly history" href="year-history.html" class="w-14 h-14 rounded-xl glass-card flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all text-2xl"><i class="fas fa-calendar-alt"></i></a>
+                <!-- 月間履歴ページへ移動するボタン -->
+                <a aria-label="Open monthly history" title="Open monthly history" href="month-history.html" class="w-14 h-14 rounded-xl glass-card flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all text-2xl"><i class="fas fa-calendar"></i></a>
                 <button aria-label="Open settings" title="Open settings" onclick="Config.toggle()" class="w-14 h-14 rounded-xl glass-card flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all text-2xl"><i class="fas fa-cog"></i></button>
                 <button aria-label="Export session data" title="Export session data" onclick="System.export()" class="w-14 h-14 rounded-xl glass-card flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all text-2xl"><i class="fas fa-download"></i></button>
             </div>
@@ -53,7 +57,7 @@
                         <!-- 月間目標の見出しと進捗値 -->
                         <div class="flex items-center justify-between mb-3">
                             <!-- 月間体重目標のタイトル -->
-                            <h3 class="text-base font-black text-slate-400 tracking-[0.2em] uppercase">Monthly Weight Goal</h3>
+                            <h3 class="text-base font-black text-slate-400 tracking-[0.2em] uppercase">Monthly Weight Goal <span id="monthGoalLabel">--</span></h3>
                             <!-- 月間の進捗概要表示 -->
                             <span id="monthGoalSummary" class="text-sm font-black text-slate-900">0.0 / 0.0 kg</span>
                         </div>
@@ -69,8 +73,8 @@
                     <div>
                         <!-- 年間目標の見出しと進捗値 -->
                         <div class="flex items-center justify-between mb-3">
-                            <!-- 年間体重目標のタイトル -->
-                            <h3 class="text-base font-black text-slate-400 tracking-[0.2em] uppercase">Yearly Weight Goal</h3>
+                        <!-- 年間体重目標のタイトル -->
+                            <h3 class="text-base font-black text-slate-400 tracking-[0.2em] uppercase">Yearly Weight Goal <span id="yearGoalLabel">----</span></h3>
                             <!-- 年間の進捗概要表示 -->
                             <span id="yearGoalSummary" class="text-sm font-black text-slate-900">0.0 / 0.0 kg</span>
                         </div>

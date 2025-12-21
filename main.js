@@ -589,6 +589,10 @@ const System = {
     updateLongTermProgress() {
         const monthTarget = Config.getMonthTarget(); // 月間目標体重を取得する
         const yearTarget = Config.getYearTarget(); // 年間目標体重を取得する
+        const monthLabel = document.getElementById('monthGoalLabel'); // 月ラベル表示を取得する
+        const yearLabel = document.getElementById('yearGoalLabel'); // 年度ラベル表示を取得する
+        if(monthLabel) monthLabel.innerText = `${new Date().getMonth() + 1}`; // 現在の月を表示する
+        if(yearLabel) yearLabel.innerText = `${new Date().getFullYear()}`; // 現在年を表示する
         const monthSummary = document.getElementById('monthGoalSummary'); // 月間サマリー表示を取得する
         const yearSummary = document.getElementById('yearGoalSummary'); // 年間サマリー表示を取得する
         const monthBar = document.getElementById('monthGoalProgressBar'); // 月間進捗バーを取得する

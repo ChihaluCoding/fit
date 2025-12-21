@@ -20,6 +20,18 @@
         </div>
         <div id="historyList" class="grid grid-cols-7 gap-3"></div>
         <small class="text-slate-400 uppercase tracking-[0.3em] block text-center">1か月分の体重推移を表示</small>
+        <!-- 体重推移グラフの表示エリア -->
+        <div class="mt-6 bg-white/70 border border-slate-100 rounded-2xl p-4">
+            <!-- グラフの見出し -->
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Weight Graph</p>
+                <span id="graphLabel" class="text-xs font-black uppercase tracking-[0.3em] text-slate-400">--</span>
+            </div>
+            <!-- SVGグラフの描画領域 -->
+            <svg id="weightGraph" viewBox="0 0 600 200" class="w-full h-48"></svg>
+            <!-- グラフの説明 -->
+            <p id="graphNote" class="text-xs font-bold text-slate-400 mt-3">記録がある日だけ線で結びます</p>
+        </div>
     </div>
 
     <script>
@@ -88,6 +100,65 @@
             container.innerHTML = cells.join('');
         }
 
+        // 月間の体重推移データを抽出する
+        function buildMonthSeries(date) {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            const points = [];
+            for(let day = 1; day <= lastDay; day++) {
+                const dateObj = new Date(year, month, day);
+                const iso = dateObj.toISOString().split('T')[0];
+                const weight = logMap[iso];
+                if(weight !== undefined) {
+                    points.push({ day, weight: parseFloat(weight) });
+                }
+            }
+            return points;
+        }
+
+        // 体重推移グラフを描画する
+        function renderGraph(date) {
+            const svg = document.getElementById('weightGraph');
+            const label = document.getElementById('graphLabel');
+            const note = document.getElementById('graphNote');
+            if(!svg || !label || !note) return;
+            const points = buildMonthSeries(date);
+            const monthText = date.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit' });
+            label.textContent = monthText;
+            if(points.length === 0) {
+                svg.innerHTML = '<text x="300" y="100" text-anchor="middle" fill="#94a3b8" font-size="14">記録がありません</text>';
+                note.textContent = '体重を記録するとグラフが表示されます';
+                return;
+            }
+            const weights = points.map(p => p.weight);
+            const minWeight = Math.min(...weights);
+            const maxWeight = Math.max(...weights);
+            const range = Math.max(0.1, maxWeight - minWeight);
+            const paddingX = 40;
+            const paddingY = 20;
+            const width = 600 - paddingX * 2;
+            const height = 200 - paddingY * 2;
+            const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+            const coords = points.map(p => {
+                const x = paddingX + ((p.day - 1) / (lastDay - 1 || 1)) * width;
+                const y = paddingY + (1 - (p.weight - minWeight) / range) * height;
+                return { x, y, weight: p.weight };
+            });
+            const path = coords.map((p, idx) => `${idx === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+            const minLabel = minWeight.toFixed(1);
+            const maxLabel = maxWeight.toFixed(1);
+            svg.innerHTML = `
+                <line x1="${paddingX}" y1="${paddingY}" x2="${paddingX}" y2="${paddingY + height}" stroke="#e2e8f0" stroke-width="2"></line>
+                <line x1="${paddingX}" y1="${paddingY + height}" x2="${paddingX + width}" y2="${paddingY + height}" stroke="#e2e8f0" stroke-width="2"></line>
+                <path d="${path}" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+                ${coords.map(p => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="#0ea5e9"></circle>`).join('')}
+                <text x="${paddingX}" y="${paddingY - 6}" fill="#94a3b8" font-size="12">${maxLabel} kg</text>
+                <text x="${paddingX}" y="${paddingY + height + 18}" fill="#94a3b8" font-size="12">${minLabel} kg</text>
+            `;
+            note.textContent = '記録がある日だけ線で結びます';
+        }
+
         // クリックされた削除ボタンの対象ログを削除する
         container.addEventListener('click', (event) => {
             const button = event.target.closest('[data-delete-date]');
@@ -97,22 +168,26 @@
             const nextLogs = logs.filter(log => log.date !== dateKey);
             saveLogs(nextLogs);
             renderCalendar(currentDate);
+            renderGraph(currentDate);
         });
 
         // 前月ボタンで表示月を切り替える
         prevBtn.addEventListener('click', () => {
             currentDate.setMonth(currentDate.getMonth() - 1);
             renderCalendar(currentDate);
+            renderGraph(currentDate);
         });
 
         // 翌月ボタンで表示月を切り替える
         nextBtn.addEventListener('click', () => {
             currentDate.setMonth(currentDate.getMonth() + 1);
             renderCalendar(currentDate);
+            renderGraph(currentDate);
         });
 
         // 初期表示を描画する
         renderCalendar(currentDate);
+        renderGraph(currentDate);
     </script>
 </body>
 </html>
