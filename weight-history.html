@@ -59,9 +59,23 @@
             }, {});
         }
 
+        // 体重ログを日付降順に並べて整理する
+        function sortLogsByDate(sourceLogs) {
+            return sourceLogs.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        // 今日の設定体重を更新する
+        function syncConfigWeightIfToday(dateKey, weightValue) {
+            const todayKey = new Date().toISOString().split('T')[0]; // 今日の日付キーを取得する
+            if(dateKey !== todayKey) return; // 今日以外は設定体重を更新しない
+            const cfg = JSON.parse(localStorage.getItem('stridex_config')) || {}; // 既存設定を取得する
+            cfg.weight = weightValue; // 設定体重を最新の入力値に更新する
+            localStorage.setItem('stridex_config', JSON.stringify(cfg)); // 設定を保存する
+        }
+
         // 体重ログを保存して状態を更新する
         function saveLogs(nextLogs) {
-            logs = nextLogs;
+            logs = sortLogsByDate(nextLogs); // 保存前に日付降順で整列する
             localStorage.setItem('stridex_weight_logs', JSON.stringify(logs));
             logMap = buildLogMap(logs);
         }
@@ -85,6 +99,8 @@
                 const dateObj = new Date(year, month, day);
                 const iso = dateObj.toISOString().split('T')[0];
                 const weight = logMap[iso];
+                const editLabel = weight ? '編集' : '記録'; // 体重がある場合は編集、無い場合は記録と表示する
+                const editButton = `<button type="button" data-edit-date="${iso}" class="text-[0.6rem] font-black uppercase tracking-[0.3em] text-blue-600 hover:text-blue-800">${editLabel}</button>`; // 体重入力の編集ボタンを作る
                 const deleteButton = weight
                     ? `<button type="button" data-delete-date="${iso}" class="text-[0.6rem] font-black uppercase tracking-[0.3em] text-rose-500 hover:text-rose-700">削除</button>`
                     : '';
@@ -92,7 +108,10 @@
                     <div class="h-24 rounded-2xl bg-white border border-slate-100 flex flex-col justify-between p-3">
                         <span class="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">${('0' + day).slice(-2)}</span>
                         <span class="text-xl font-black ${weight ? 'text-slate-900' : 'text-slate-300'}">${weight ? weight + ' kg' : '--'}</span>
-                        ${deleteButton}
+                        <div class="flex items-center justify-between">
+                            ${editButton}
+                            ${deleteButton}
+                        </div>
                     </div>
                 `);
             }
@@ -161,6 +180,30 @@
 
         // クリックされた削除ボタンの対象ログを削除する
         container.addEventListener('click', (event) => {
+            const editButton = event.target.closest('[data-edit-date]');
+            if(editButton) {
+                const dateKey = editButton.getAttribute('data-edit-date'); // 編集対象の日付キーを取得する
+                if(!dateKey) return;
+                const currentValue = logMap[dateKey]; // 既存の体重を取得する
+                const inputValue = window.prompt('体重を入力してください (kg)', currentValue !== undefined ? currentValue : ''); // 入力ダイアログを表示する
+                if(inputValue === null) return; // キャンセル時は処理しない
+                const nextValue = parseFloat(inputValue); // 入力値を数値に変換する
+                if(!nextValue || nextValue <= 0) {
+                    window.alert('正しい体重を入力してください。'); // 不正値の場合は警告する
+                    return;
+                }
+                const existingIndex = logs.findIndex(log => log.date === dateKey); // 既存ログの位置を取得する
+                if(existingIndex >= 0) {
+                    logs[existingIndex].weight = nextValue; // 既存記録を更新する
+                } else {
+                    logs.push({ date: dateKey, weight: nextValue }); // 新規記録を追加する
+                }
+                syncConfigWeightIfToday(dateKey, nextValue); // 今日の体重なら設定にも反映する
+                saveLogs(logs); // ログを保存して状態を更新する
+                renderCalendar(currentDate); // カレンダー表示を更新する
+                renderGraph(currentDate); // グラフも更新する
+                return;
+            }
             const button = event.target.closest('[data-delete-date]');
             if(!button) return;
             const dateKey = button.getAttribute('data-delete-date');

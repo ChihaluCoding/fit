@@ -551,14 +551,16 @@ const System = {
                 const input = document.getElementById('weightInput');
                 const value = parseFloat(input.value);
                 if(!value) return;
-                const weightLogs = JSON.parse(localStorage.getItem('stridex_weight_logs')) || [];
-                const today = new Date().toISOString().split('T')[0];
-                if(weightLogs[0] && weightLogs[0].date === today) {
-                    weightLogs[0].weight = value; // 既に今日の記録があれば上書きする
+                const weightLogs = JSON.parse(localStorage.getItem('stridex_weight_logs')) || []; // 既存の体重ログを取得する
+                const today = new Date().toISOString().split('T')[0]; // 今日の日付キーを作成する
+                const existingIndex = weightLogs.findIndex(log => log.date === today); // 今日の記録があるか探す
+                if(existingIndex >= 0) {
+                    weightLogs[existingIndex].weight = value; // 既に今日の記録があれば上書きする
                 } else {
-                    weightLogs.unshift({ date: today, weight: value }); // 今日が未記録なら新規追加する
+                    weightLogs.push({ date: today, weight: value }); // 今日が未記録なら新規追加する
                 }
-                localStorage.setItem('stridex_weight_logs', JSON.stringify(weightLogs.slice(0, 120)));
+                weightLogs.sort((a, b) => new Date(b.date) - new Date(a.date)); // 日付降順に並べて最新が先頭になるようにする
+                localStorage.setItem('stridex_weight_logs', JSON.stringify(weightLogs.slice(0, 120))); // 保存件数を制限して保存する
                 const cfgWeightEl = document.getElementById('cfgWeight'); // 設定画面の体重入力欄を取得する
                 if(cfgWeightEl) cfgWeightEl.value = value.toFixed(1); // 体重ログの値を設定画面にも反映する
                 const cfg = JSON.parse(localStorage.getItem('stridex_config')) || {}; // 既存設定を取得する
@@ -584,11 +586,23 @@ const System = {
                     return;
                 }
 
-                todayEl.innerText = `${weightLogs[0].weight} kg`;
-                ydayEl.innerText = weightLogs[1] ? `${weightLogs[1].weight} kg` : "--";
+                const logMap = weightLogs.reduce((acc, log) => {
+                    if(!acc[log.date]) acc[log.date] = log.weight; // 同日の記録が複数あっても最初の値を優先する
+                    return acc;
+                }, {}); // 日付と体重のマップを作成する
+                const todayKey = new Date().toISOString().split('T')[0]; // 今日の日付キーを取得する
+                const yesterday = new Date(); // 昨日の日付を生成する
+                yesterday.setDate(yesterday.getDate() - 1); // 1日前に戻す
+                const yesterdayKey = yesterday.toISOString().split('T')[0]; // 昨日の日付キーを取得する
+                const todayWeight = logMap[todayKey]; // 今日の体重を取得する
+                const yesterdayWeight = logMap[yesterdayKey]; // 昨日の体重を取得する
+                // 今日・昨日の表示は日付キーで取得した結果を使う
+                todayEl.innerText = todayWeight !== undefined ? `${todayWeight} kg` : "--";
+                ydayEl.innerText = yesterdayWeight !== undefined ? `${yesterdayWeight} kg` : "--";
 
-                if(weightLogs.length >= 2) {
-                    const diff = (weightLogs[0].weight - weightLogs[1].weight).toFixed(1);
+                // 前日との差分は両方の値がある場合のみ計算する
+                if(todayWeight !== undefined && yesterdayWeight !== undefined) {
+                    const diff = (parseFloat(todayWeight) - parseFloat(yesterdayWeight)).toFixed(1);
                     indicator.innerText = diff > 0 ? `+${diff}` : diff;
                     indicator.className = `text-sm font-black tracking-[0.2em] ${diff > 0 ? 'weight-up' : diff < 0 ? 'weight-down' : ''}`;
                 } else {
