@@ -559,6 +559,11 @@ const System = {
                     weightLogs.unshift({ date: today, weight: value }); // 今日が未記録なら新規追加する
                 }
                 localStorage.setItem('stridex_weight_logs', JSON.stringify(weightLogs.slice(0, 120)));
+                const cfgWeightEl = document.getElementById('cfgWeight'); // 設定画面の体重入力欄を取得する
+                if(cfgWeightEl) cfgWeightEl.value = value.toFixed(1); // 体重ログの値を設定画面にも反映する
+                const cfg = JSON.parse(localStorage.getItem('stridex_config')) || {}; // 既存設定を取得する
+                cfg.weight = value; // 体重設定を最新入力に合わせて更新する
+                localStorage.setItem('stridex_config', JSON.stringify(cfg)); // 設定を保存して次回起動時も反映する
                 this.renderWeightLogs(weightLogs);
                 this.updateGoalProgress(); // 体重目標の進捗を更新する
                 this.updateLongTermProgress(); // 月間・年間の進捗も更新する
@@ -666,18 +671,34 @@ const System = {
         }
         const periodKey = this.getPeriodKey(periodType); // 現在の期間キーを取得する
         const stored = this.getStoredBaseline(periodType); // 保存済みベースラインを取得する
+        const periodStart = this.getPeriodStartDate(periodType); // 期間の開始日を取得する
+        const periodStartKey = this.formatDateKey(periodStart); // 期間開始日のキーを作成する
+        const allLogs = this.getWeightLogs().slice().sort((a, b) => new Date(a.date) - new Date(b.date)); // 全ログを日付順に並べる
+        let baselineLog = null; // ベースラインとなるログを初期化する
+        if(periodType === 'month') {
+            const prevMonthEnd = new Date(periodStart.getFullYear(), periodStart.getMonth(), 0); // 先月の月末日を取得する
+            const prevMonthEndKey = this.formatDateKey(prevMonthEnd); // 先月末のキーを作成する
+            baselineLog = allLogs.find(log => log.date === prevMonthEndKey) || null; // 先月末のログがあればそれを使う
+        } else {
+            baselineLog = allLogs.find(log => log.date === periodStartKey) || null; // 年始のログがあればそれを使う
+        }
+        if(baselineLog) {
+            const baselineWeight = parseFloat(baselineLog.weight); // ベースライン体重を数値化する
+            if(isNaN(baselineWeight)) return null; // 数値化できない場合は終了する
+            if(stored && stored.key === periodKey && stored.date === baselineLog.date && typeof stored.weight === 'number') {
+                return stored.weight; // 保存済みがあれば初期値を維持して返す
+            }
+            this.setStoredBaseline(periodType, { key: periodKey, date: baselineLog.date, weight: baselineWeight }); // ベースラインを保存する
+            return baselineWeight; // 先月末または年始の体重を返す
+        }
         const firstLog = periodLogs[0]; // 期間内の最初のログを取得する
         const firstWeight = parseFloat(firstLog.weight); // 最初の体重を数値化する
         if(isNaN(firstWeight)) return null; // 数値化できない場合は終了する
-        if(periodLogs.length >= 2) {
-            this.setStoredBaseline(periodType, { key: periodKey, date: firstLog.date, weight: firstWeight }); // 期間開始のログをベースラインとして保存する
-            return firstWeight; // 期間の最初の体重を返す
-        }
         if(stored && stored.key === periodKey && stored.date === firstLog.date && typeof stored.weight === 'number') {
-            return stored.weight; // 同日で上書きされた場合は初回体重を維持して返す
+            return stored.weight; // 同日上書きでも初回体重を維持して返す
         }
-        this.setStoredBaseline(periodType, { key: periodKey, date: firstLog.date, weight: firstWeight }); // ベースラインを更新する
-        return firstWeight; // 最新の基準値を返す
+        this.setStoredBaseline(periodType, { key: periodKey, date: firstLog.date, weight: firstWeight }); // 期間開始のログをベースラインとして保存する
+        return firstWeight; // 最初の記録体重を返す
     },
     updateGoalProgress(activeKcal = null) {
         const target = Config.getDailyKcalTarget(); // 1日の消費カロリー目標を取得する
@@ -734,6 +755,15 @@ const System = {
     getYearId(dateInput) {
         const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput; // 文字列とDateを統一して扱う
         return `${d.getFullYear()}`; // 年キーを返す
+    },
+    formatDateKey(dateInput) {
+        const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput; // 日付入力をDateに統一する
+        return d.toISOString().split('T')[0]; // 保存形式に合わせてYYYY-MM-DDを返す
+    },
+    getPeriodStartDate(periodType, dateInput = new Date()) {
+        const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput; // 文字列とDateを統一して扱う
+        if(periodType === 'month') return new Date(d.getFullYear(), d.getMonth(), 1); // 月の初日を返す
+        return new Date(d.getFullYear(), 0, 1); // 年の初日を返す
     },
     updateLongTermProgress() {
         const monthTarget = Config.getMonthTarget(); // 月間目標体重を取得する
