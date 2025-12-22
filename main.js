@@ -814,19 +814,20 @@ const Config = {
     load() {
         const cfg = JSON.parse(localStorage.getItem('stridex_config'));
         if(!cfg) return;
-        if(cfg.weight) document.getElementById('cfgWeight').value = cfg.weight;
-        if(cfg.age) document.getElementById('cfgAge').value = cfg.age; // 年齢設定を復元する
-        if(cfg.height) document.getElementById('cfgHeight').value = cfg.height; // 身長設定を復元する
-        if(cfg.sex) document.getElementById('cfgSex').value = cfg.sex; // 性別設定を復元する
-        if(cfg.jumpHeight) document.getElementById('cfgJumpHeight').value = cfg.jumpHeight; // ジャンプ高さ設定を復元する
+        const hasKey = (key) => Object.prototype.hasOwnProperty.call(cfg, key); // 設定の存在判定を行うヘルパーを用意する
+        if(hasKey('weight')) document.getElementById('cfgWeight').value = cfg.weight; // 体重設定を復元する
+        if(hasKey('age')) document.getElementById('cfgAge').value = cfg.age; // 年齢設定を復元する
+        if(hasKey('height')) document.getElementById('cfgHeight').value = cfg.height; // 身長設定を復元する
+        if(hasKey('sex')) document.getElementById('cfgSex').value = cfg.sex; // 性別設定を復元する
+        if(hasKey('jumpHeight')) document.getElementById('cfgJumpHeight').value = cfg.jumpHeight; // ジャンプ高さ設定を復元する
         if(typeof cfg.intervalEnabled === 'boolean') document.getElementById('cfgIntervalEnabled').checked = cfg.intervalEnabled; // インターバル有効設定を復元する
-        if(cfg.intervalWorkSec) document.getElementById('cfgIntervalWorkSec').value = cfg.intervalWorkSec; // ワーク時間設定を復元する
-        if(cfg.intervalRestSec) document.getElementById('cfgIntervalRestSec').value = cfg.intervalRestSec; // レスト時間設定を復元する
-        if(cfg.intervalRestRatio) document.getElementById('cfgIntervalRestRatio').value = cfg.intervalRestRatio; // レスト強度倍率を復元する
-        if(cfg.monthTarget) document.getElementById('cfgMonthTarget').value = cfg.monthTarget; // 月間目標体重を復元する
-        if(cfg.yearTarget) document.getElementById('cfgYearTarget').value = cfg.yearTarget; // 年間目標体重を復元する
-        if(cfg.dailyKcal) document.getElementById('cfgDailyKcal').value = cfg.dailyKcal;
-        if(typeof cfg.voice === 'boolean') document.getElementById('cfgVoice').checked = cfg.voice;
+        if(hasKey('intervalWorkSec')) document.getElementById('cfgIntervalWorkSec').value = cfg.intervalWorkSec; // ワーク時間設定を復元する
+        if(hasKey('intervalRestSec')) document.getElementById('cfgIntervalRestSec').value = cfg.intervalRestSec; // レスト時間設定を復元する
+        if(hasKey('intervalRestRatio')) document.getElementById('cfgIntervalRestRatio').value = cfg.intervalRestRatio; // レスト強度倍率を復元する
+        if(hasKey('monthTarget')) document.getElementById('cfgMonthTarget').value = cfg.monthTarget; // 月間目標体重を復元する
+        if(hasKey('yearTarget')) document.getElementById('cfgYearTarget').value = cfg.yearTarget; // 年間目標体重を復元する
+        if(hasKey('dailyKcal')) document.getElementById('cfgDailyKcal').value = cfg.dailyKcal; // 1日の消費カロリー目標を復元する
+        if(typeof cfg.voice === 'boolean') document.getElementById('cfgVoice').checked = cfg.voice; // 音声設定を復元する
     },
     save() {
         localStorage.setItem('stridex_config', JSON.stringify({
