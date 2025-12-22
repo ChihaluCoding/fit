@@ -19,6 +19,27 @@ const System = {
     lastMonthBonus: localStorage.getItem('stridex_last_month_bonus') || null, // 最終月間ボーナス付与月
     sessionXpEarned: 0, // セッション内で獲得済みのXPを追跡して重複加算を防ぐ
     sessionLevelRef: 1, // セッション開始時のレベルを保持して計算を安定させる
+    lastUiDate: localStorage.getItem('stridex_ui_date') || new Date().toISOString().split('T')[0], // 画面更新で使用する日付キーを保持する
+
+    getTodayKey() { // 今日の日付キーを生成する
+        return new Date().toISOString().split('T')[0]; // ISO形式のYYYY-MM-DDを返す
+    },
+
+    syncDayRollover(force = false) { // 日付変更を検知して画面状態を更新する
+        const todayKey = this.getTodayKey(); // 今日の日付キーを取得する
+        if(!force && this.lastUiDate === todayKey) return; // 日付が変わっていなければ何もしない
+        this.lastUiDate = todayKey; // 最新の日付キーに更新する
+        localStorage.setItem('stridex_ui_date', todayKey); // 次回の起動時用に保存する
+        this.ms = 0; // セッション時間をリセットする
+        this.currentWorkSeconds = 0; // ワーク経過時間もリセットする
+        this.sessionXpEarned = 0; // 日付跨ぎ時はXP計測をリセットする
+        this.intervalPhase = 'work'; // インターバルフェーズを初期状態へ戻す
+        this.update(); // タイマーやカロリー表示を更新する
+        this.updateGoalProgress(0); // 1日の進捗を初期化する
+        this.renderWeightLogs(); // 今日・昨日の体重表示を更新する
+        this.updateLongTermProgress(); // 月間・年間の進捗を更新する
+        this.render(); // 画面全体の表示を同期する
+    },
 
     toggle() {
         this.isRunning = !this.isRunning;
@@ -541,7 +562,7 @@ const System = {
     },
 
             getTodayTotal() {
-                const today = new Date().toISOString().split('T')[0];
+                const today = this.getTodayKey(); // 今日の日付キーを取得する
                 return this.logs.reduce((sum, log) => {
                     return sum + (log.date === today ? parseFloat(log.kcal) : 0);
                 }, 0);
@@ -1301,6 +1322,8 @@ System.render();
 System.updateGoalProgress();
 System.updateLongTermProgress(); // 起動時に月間・年間の進捗を初期表示する
 System.renderWeightLogs();
+System.syncDayRollover(true); // 起動時に日付跨ぎの表示崩れを防ぐ
+setInterval(() => System.syncDayRollover(), 30000); // 日付変更を30秒ごとに監視して反映する
 Music.init();
 Shop.init();
 
