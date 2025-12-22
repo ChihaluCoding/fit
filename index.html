@@ -276,6 +276,8 @@
                         <label class="text-sm font-bold text-slate-500">消費カロリー目標 (kcal)</label>
                         <!-- 1日の消費カロリー目標は整数入力を想定する -->
                         <input type="number" id="cfgDailyKcal" step="1" value="300" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                        <!-- 今日の消費カロリーをリセットするボタン -->
+                        <button type="button" onclick="System.resetDailyKcal()" class="w-full mt-3 px-5 py-3 rounded-2xl bg-rose-50 text-rose-600 font-black uppercase tracking-widest text-xs hover:bg-rose-100 transition-all">Daily Kcal Reset</button>
                     </div>
                 </div>
                 <!-- 年齢・身長・性別を設定して消費カロリー精度を高める -->

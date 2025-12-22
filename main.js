@@ -870,6 +870,22 @@ const System = {
         this.updateGoalProgress(); // 1日の消費カロリー目標を更新する
         input.value = ""; // 入力欄をクリアする
     },
+    resetDailyKcal() {
+        const todayKey = this.getTodayKey(); // 今日の日付キーを取得する
+        const hasTodayLogs = this.logs.some(log => log.date === todayKey); // 今日のログがあるか確認する
+        if(!hasTodayLogs) {
+            alert("今日のカロリーログはありません。"); // 何も無い場合は通知する
+            return;
+        }
+        const ok = confirm("今日の消費カロリーをリセットしますか？"); // 誤操作防止の確認を行う
+        if(!ok) return; // キャンセル時は何もしない
+        this.logs = this.logs.filter(log => log.date !== todayKey); // 今日のログだけ除外する
+        localStorage.setItem('stridex_infinity_final', JSON.stringify(this.logs)); // ログを保存する
+        this.render(); // 表示全体を最新状態に更新する
+        const liveKcal = parseFloat(document.getElementById('liveKcal')?.innerText || "0"); // 現在セッションのカロリーを取得する
+        const activeKcal = this.isRunning ? liveKcal : 0; // 稼働中は現在セッション分を進捗に反映する
+        this.updateGoalProgress(activeKcal); // 1日の消費カロリー目標を更新する
+    },
     xpNeededFor(level) {
         return 1000 + (level - 1) * 200;
     },
