@@ -93,7 +93,9 @@
                         <span id="bestLabel" class="text-sm font-bold text-slate-400 uppercase tracking-widest">PB: <span id="pbVal" class="text-slate-900 font-black">0.0</span> kcal</span>
                     </div>
 
-                    <div id="timer" class="font-outfit font-900 tracking-tighter text-slate-900 leading-none mb-12 select-none">00:00</div>
+                    <div id="timer" class="font-outfit font-900 tracking-tighter text-slate-900 leading-none mb-4 select-none">00:00</div>
+                    <!-- インターバル状態の表示ラベル -->
+                    <p id="intervalStatus" class="text-xs font-bold text-slate-400 tracking-[0.3em] uppercase mb-10">インターバル: オフ</p>
 
                     <div class="grid grid-cols-3 gap-6 mb-16">
                         <div>
@@ -272,6 +274,70 @@
                         <label class="text-sm font-bold text-slate-500">消費カロリー目標 (kcal)</label>
                         <!-- 1日の消費カロリー目標は整数入力を想定する -->
                         <input type="number" id="cfgDailyKcal" step="1" value="300" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                    </div>
+                </div>
+                <!-- 年齢・身長・性別を設定して消費カロリー精度を高める -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="space-y-2">
+                        <!-- 年齢入力のラベル -->
+                        <label class="text-sm font-bold text-slate-500">年齢 (歳)</label>
+                        <!-- 年齢は整数入力を想定する -->
+                        <input type="number" id="cfgAge" step="1" value="30" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                    </div>
+                    <div class="space-y-2">
+                        <!-- 身長入力のラベル -->
+                        <label class="text-sm font-bold text-slate-500">身長 (cm)</label>
+                        <!-- 身長は小数点入力を許可する -->
+                        <input type="number" id="cfgHeight" step="0.1" value="170.0" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                    </div>
+                    <div class="space-y-2">
+                        <!-- 性別選択のラベル -->
+                        <label class="text-sm font-bold text-slate-500">性別</label>
+                        <!-- 性別は選択式で入力ミスを減らす -->
+                        <select id="cfgSex" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                            <option value="unspecified">未指定</option>
+                            <option value="male">男性</option>
+                            <option value="female">女性</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- ジャンプ高さを設定してMETs補正を反映する -->
+                <div class="space-y-2">
+                    <!-- ジャンプ高さのラベル -->
+                    <label class="text-sm font-bold text-slate-500">ジャンプ高さ</label>
+                    <!-- ジャンプ高さは選択式で入力ミスを減らす -->
+                    <select id="cfgJumpHeight" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                        <option value="high">高いジャンプ (5cm〜)</option>
+                        <option value="low">低いジャンプ (3cm)</option>
+                    </select>
+                </div>
+                <!-- インターバル設定でワーク/レストを切り替える -->
+                <div class="space-y-4">
+                    <!-- インターバル有効化の行 -->
+                    <div class="flex items-center justify-between p-6 bg-slate-50 rounded-2xl">
+                        <span class="text-lg font-bold text-slate-800 italic">インターバル</span>
+                        <input type="checkbox" id="cfgIntervalEnabled" class="w-8 h-8 accent-blue-600">
+                    </div>
+                    <!-- ワーク/レスト時間と強度の入力エリア -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="space-y-2">
+                            <!-- ワーク時間のラベル -->
+                            <label class="text-sm font-bold text-slate-500">ワーク (秒)</label>
+                            <!-- ワーク時間は整数入力を想定する -->
+                            <input type="number" id="cfgIntervalWorkSec" step="1" value="60" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                        </div>
+                        <div class="space-y-2">
+                            <!-- レスト時間のラベル -->
+                            <label class="text-sm font-bold text-slate-500">レスト (秒)</label>
+                            <!-- レスト時間は整数入力を想定する -->
+                            <input type="number" id="cfgIntervalRestSec" step="1" value="30" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                        </div>
+                        <div class="space-y-2">
+                            <!-- レスト強度倍率のラベル -->
+                            <label class="text-sm font-bold text-slate-500">レスト強度倍率</label>
+                            <!-- レスト強度倍率は小数入力を許可する -->
+                            <input type="number" id="cfgIntervalRestRatio" step="0.1" value="0.6" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
+                        </div>
                     </div>
                 </div>
                 <!-- 月間/年間の体重目標を個別に設定する -->

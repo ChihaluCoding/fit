@@ -1,6 +1,9 @@
 // System logic remains identical as requested
 const System = {
     isRunning: false, ms: 0, mets: 8.8, bpm: 110,
+    baseMets: 8.8, // 補正前のMETsを保持して再計算に使う
+    baseBpm: 110, // 補正前のBPMを保持して再計算に使う
+    intervalPhase: 'work', // インターバルの現在フェーズを保持する
     timer: null, rhythm: null, audio: null,
     logs: JSON.parse(localStorage.getItem('stridex_infinity_final')) || [],
     pb: parseFloat(localStorage.getItem('stridex_pb')) || 0,
@@ -55,15 +58,79 @@ const System = {
     },
 
     setMode(mets, bpm, btn) {
-        this.mets = mets; this.bpm = bpm;
-        document.getElementById('metsLabel').innerText = `${mets} METs`;
-        document.getElementById('liveBpm').innerText = bpm;
+        this.baseMets = mets; // 補正前のMETsを更新する
+        this.baseBpm = bpm; // 補正前のBPMを更新する
+        if(Config.getIntervalEnabled()) { // インターバル有効時の分岐を行う
+            this.intervalPhase = 'work'; // モード変更時はワークから開始する
+            this.applyIntervalPhase('work'); // インターバル設定に応じた値へ切り替える
+        } else {
+            this.mets = this.getAdjustedMets(mets, bpm); // ジャンプ高さ補正を反映したMETsを設定する
+            this.bpm = bpm; // BPMは選択値をそのまま反映する
+            document.getElementById('metsLabel').innerText = `${this.mets.toFixed(1)} METs`; // 補正後のMETsを小数1桁で表示する
+            document.getElementById('liveBpm').innerText = bpm; // BPM表示を更新する
+        }
         document.querySelectorAll('.mode-btn').forEach(b => {
             b.classList.remove('active-ring', 'text-blue-600');
             b.classList.add('text-slate-400');
         });
         btn.classList.add('active-ring', 'text-blue-600');
         if(this.isRunning) this.startBeat();
+    },
+    getAdjustedMets(baseMets, bpm) {
+        const jumpHeight = Config.getJumpHeight(); // 設定されたジャンプ高さを取得する
+        if(jumpHeight !== 'low') return baseMets; // 低いジャンプ以外は補正しない
+        const correctionTable = {
+            110: 6.0, // 低いジャンプ用のMETs補正値
+            140: 7.5, // 低いジャンプ用のMETs補正値
+            160: 8.5, // 低いジャンプ用のMETs補正値
+            200: 10.0 // 低いジャンプ用のMETs補正値
+        }; // BPMごとの補正値をまとめる
+        const corrected = correctionTable[bpm]; // BPMに対応する補正値を取得する
+        return corrected || baseMets; // 未定義なら元のMETsを返す
+    },
+    applyIntervalPhase(phase) { // インターバルフェーズに応じた値を反映する
+        const workMets = this.getAdjustedMets(this.baseMets, this.baseBpm); // ジャンプ高さ補正を反映したワークMETsを取得する
+        if(phase === 'rest') { // レストフェーズ時の処理を行う
+            const ratio = Config.getIntervalRestRatio(); // 休憩時の強度倍率を取得する
+            const restMets = Math.max(1, parseFloat((workMets * ratio).toFixed(1))); // 休憩時のMETsを算出する
+            const restBpm = Math.max(60, Math.round(this.baseBpm * ratio)); // 休憩時のBPMを算出する
+            this.mets = restMets; // 休憩時のMETsを反映する
+            this.bpm = restBpm; // 休憩時のBPMを反映する
+        } else {
+            this.mets = workMets; // ワーク時のMETsを反映する
+            this.bpm = this.baseBpm; // ワーク時のBPMを反映する
+        }
+        document.getElementById('metsLabel').innerText = `${this.mets.toFixed(1)} METs`; // METs表示を更新する
+        document.getElementById('liveBpm').innerText = this.bpm; // BPM表示を更新する
+        if(this.isRunning) this.startBeat(); // 実行中はリズムも更新する
+    },
+    updateIntervalStatus(phase, remainingSec) { // インターバル表示を更新する
+        const el = document.getElementById('intervalStatus'); // インターバル表示要素を取得する
+        if(!el) return; // 要素が無ければ処理しない
+        if(!Config.getIntervalEnabled()) { // インターバル無効時の表示を更新する
+            el.innerText = "インターバル: オフ"; // 無効時の表示を更新する
+            return;
+        }
+        const label = phase === 'rest' ? "レスト" : "ワーク"; // フェーズ名を日本語で整える
+        el.innerText = `インターバル: ${label} ${this.formatIntervalTime(remainingSec)}`; // 残り時間を表示する
+    },
+    formatIntervalTime(seconds) {
+        const safe = Math.max(0, Math.floor(seconds)); // 安全な秒数に丸める
+        const minutes = Math.floor(safe / 60).toString().padStart(2, '0'); // 分を算出する
+        const secs = (safe % 60).toString().padStart(2, '0'); // 秒を算出する
+        return `${minutes}:${secs}`; // MM:SS形式で返す
+    },
+    refreshMets() { // METs表示を最新設定に合わせて更新する
+        if(Config.getIntervalEnabled()) { // インターバル有効時の反映を行う
+            this.intervalPhase = 'work'; // 設定変更時はワークに戻す
+            this.applyIntervalPhase('work'); // インターバル前提のMETsを反映する
+        } else {
+            this.mets = this.getAdjustedMets(this.baseMets, this.baseBpm); // 設定変更後のMETsを再計算する
+            document.getElementById('metsLabel').innerText = `${this.mets.toFixed(1)} METs`; // 表示のMETsを小数1桁で更新する
+            document.getElementById('liveBpm').innerText = this.baseBpm; // BPM表示も基準値に戻す
+            if(this.isRunning) this.startBeat(); // 実行中ならリズムを再同期する
+        }
+        this.updateIntervalStatus(this.intervalPhase, Config.getIntervalWorkSec()); // インターバル表示を更新する
     },
 
     startBeat() {
@@ -96,22 +163,72 @@ const System = {
 
     update() {
         this.clearExpiredBoost(); // 毎フレームで期限切れのブーストを掃除して状態を正しく保つ
-        const sec = this.ms / 1000;
-        const m = Math.floor(sec / 60).toString().padStart(2, '0');
-        const s = Math.floor(sec % 60).toString().padStart(2, '0');
-        document.getElementById('timer').textContent = `${m}:${s}`;
+        const sec = this.ms / 1000; // セッション全体の経過秒数を算出する
+        let workSeconds = sec; // 休憩が無い場合は全時間をワークとして扱う
+        if(Config.getIntervalEnabled()) { // インターバル有効時はワーク時間のみ計算する
+            const workSec = Config.getIntervalWorkSec(); // ワーク時間を取得する
+            const restSec = Config.getIntervalRestSec(); // レスト時間を取得する
+            const cycle = workSec + restSec; // 1サイクルの合計時間を算出する
+            if(cycle > 0) { // 正常なサイクル時間がある場合に処理する
+                const cycles = Math.floor(sec / cycle); // 完了サイクル数を算出する
+                const remainder = sec - (cycles * cycle); // サイクル内の残り時間を算出する
+                workSeconds = (cycles * workSec) + Math.min(remainder, workSec); // ワーク経過時間を合計する
+            }
+        }
+        const m = Math.floor(workSeconds / 60).toString().padStart(2, '0'); // ワーク経過時間から分を算出する
+        const s = Math.floor(workSeconds % 60).toString().padStart(2, '0'); // ワーク経過時間から秒を算出する
+        document.getElementById('timer').textContent = `${m}:${s}`; // 休憩を除いた時間を表示する
+
+        if(Config.getIntervalEnabled()) { // インターバル有効時の進行処理を行う
+            const workSec = Config.getIntervalWorkSec(); // ワーク時間を取得する
+            const restSec = Config.getIntervalRestSec(); // レスト時間を取得する
+            const total = workSec + restSec; // 1サイクルの合計時間を算出する
+            if(total > 0) { // 正常なサイクル時間がある場合に処理する
+                const cycleSec = sec % total; // 現在のサイクル内位置を算出する
+                const phase = cycleSec < workSec ? 'work' : 'rest'; // フェーズを判定する
+                const remaining = phase === 'work' ? (workSec - cycleSec) : (total - cycleSec); // 残り秒数を算出する
+                if(phase !== this.intervalPhase) { // フェーズが変わったときだけ更新する
+                    this.intervalPhase = phase; // フェーズを更新する
+                    this.applyIntervalPhase(phase); // METsとBPMを切り替える
+                }
+                this.updateIntervalStatus(phase, remaining); // インターバル表示を更新する
+            }
+        } else {
+            if(this.intervalPhase !== 'work') { // 無効化時の復帰処理を行う
+                this.intervalPhase = 'work'; // 無効化時はワーク状態へ戻す
+                this.applyIntervalPhase('work'); // 表示とMETsをワークへ戻す
+            }
+            this.updateIntervalStatus('work', Config.getIntervalWorkSec()); // オフ状態の表示を更新する
+        }
         
-        const weight = parseFloat(document.getElementById('cfgWeight').value) || Config.getWeight() || 65;
-        const kcal = (this.mets * weight * (sec / 3600) * 1.05).toFixed(1);
+        const weight = parseFloat(document.getElementById('cfgWeight').value) || Config.getWeight() || 65; // 体重は設定値を優先して取得する
+        const kcal = this.calculateKcal(workSeconds, weight).toFixed(1); // ワーク時間に基づく消費カロリーを算出する
         const kcalVal = parseFloat(kcal);
         document.getElementById('liveKcal').innerText = kcal;
-        document.getElementById('liveJumps').innerText = Math.floor(sec * (this.bpm / 60));
+        document.getElementById('liveJumps').innerText = Math.floor(workSeconds * (this.bpm / 60)); // 休憩中はカウントを進めない
         this.updateGoalProgress(kcalVal); // 1日の消費カロリー目標はセッション中に更新する
         if(this.isRunning) this.updateRealtimeXp(kcalVal); // 稼働中は消費カロリーに応じてXPを即時加算する
         
         if(this.bpm > 150) document.body.style.background = "#fff8f8";
         else if(this.bpm > 130) document.body.style.background = "#f8fff8";
         else document.body.style.background = "#f8fafc";
+    },
+    calculateBmr(weight, height, age, sex) {
+        const safeWeight = weight > 0 ? weight : 65; // 体重の安全値を用意する
+        const safeHeight = height > 0 ? height : 170; // 身長の安全値を用意する
+        const safeAge = age > 0 ? age : 30; // 年齢の安全値を用意する
+        let sexFactor = -78; // 未選択時は男女平均に近い補正値を使う
+        if(sex === 'male') sexFactor = 5; // 男性の補正値を適用する
+        if(sex === 'female') sexFactor = -161; // 女性の補正値を適用する
+        return (10 * safeWeight) + (6.25 * safeHeight) - (5 * safeAge) + sexFactor; // Mifflin-St Jeor式でBMRを算出する
+    },
+    calculateKcal(seconds, weight) {
+        const height = Config.getHeight(); // 設定の身長を取得する
+        const age = Config.getAge(); // 設定の年齢を取得する
+        const sex = Config.getSex(); // 設定の性別を取得する
+        const bmr = this.calculateBmr(weight, height, age, sex); // 基礎代謝を算出する
+        const hourly = (bmr / 24) * this.mets; // METsを掛けた1時間あたりの消費量に変換する
+        return hourly * (seconds / 3600) * 1.05; // 補正係数を加味した総消費カロリーを返す
     },
 
     complete({ resetAfter = true } = {}) {
@@ -153,6 +270,7 @@ const System = {
         this.ms = 0;
         this.update();
         this.sessionXpEarned = 0; // セッション終了時にXPトラッカーを初期化する
+        this.intervalPhase = 'work'; // リセット時はワークフェーズに戻す
     },
 
     render() {
@@ -697,6 +815,14 @@ const Config = {
         const cfg = JSON.parse(localStorage.getItem('stridex_config'));
         if(!cfg) return;
         if(cfg.weight) document.getElementById('cfgWeight').value = cfg.weight;
+        if(cfg.age) document.getElementById('cfgAge').value = cfg.age; // 年齢設定を復元する
+        if(cfg.height) document.getElementById('cfgHeight').value = cfg.height; // 身長設定を復元する
+        if(cfg.sex) document.getElementById('cfgSex').value = cfg.sex; // 性別設定を復元する
+        if(cfg.jumpHeight) document.getElementById('cfgJumpHeight').value = cfg.jumpHeight; // ジャンプ高さ設定を復元する
+        if(typeof cfg.intervalEnabled === 'boolean') document.getElementById('cfgIntervalEnabled').checked = cfg.intervalEnabled; // インターバル有効設定を復元する
+        if(cfg.intervalWorkSec) document.getElementById('cfgIntervalWorkSec').value = cfg.intervalWorkSec; // ワーク時間設定を復元する
+        if(cfg.intervalRestSec) document.getElementById('cfgIntervalRestSec').value = cfg.intervalRestSec; // レスト時間設定を復元する
+        if(cfg.intervalRestRatio) document.getElementById('cfgIntervalRestRatio').value = cfg.intervalRestRatio; // レスト強度倍率を復元する
         if(cfg.monthTarget) document.getElementById('cfgMonthTarget').value = cfg.monthTarget; // 月間目標体重を復元する
         if(cfg.yearTarget) document.getElementById('cfgYearTarget').value = cfg.yearTarget; // 年間目標体重を復元する
         if(cfg.dailyKcal) document.getElementById('cfgDailyKcal').value = cfg.dailyKcal;
@@ -704,7 +830,15 @@ const Config = {
     },
     save() {
         localStorage.setItem('stridex_config', JSON.stringify({
-            weight: document.getElementById('cfgWeight').value,
+            weight: document.getElementById('cfgWeight').value, // 体重設定を保存する
+            age: document.getElementById('cfgAge').value, // 年齢設定を保存する
+            height: document.getElementById('cfgHeight').value, // 身長設定を保存する
+            sex: document.getElementById('cfgSex').value, // 性別設定を保存する
+            jumpHeight: document.getElementById('cfgJumpHeight').value, // ジャンプ高さ設定を保存する
+            intervalEnabled: document.getElementById('cfgIntervalEnabled').checked, // インターバル有効設定を保存する
+            intervalWorkSec: document.getElementById('cfgIntervalWorkSec').value, // ワーク時間設定を保存する
+            intervalRestSec: document.getElementById('cfgIntervalRestSec').value, // レスト時間設定を保存する
+            intervalRestRatio: document.getElementById('cfgIntervalRestRatio').value, // レスト強度倍率を保存する
             monthTarget: document.getElementById('cfgMonthTarget').value,
             yearTarget: document.getElementById('cfgYearTarget').value,
             dailyKcal: document.getElementById('cfgDailyKcal').value,
@@ -712,12 +846,48 @@ const Config = {
         }));
         this.toggle();
         System.voiceCoach("システムをアップデートしました。");
+        System.refreshMets(); // ジャンプ高さ変更を反映してMETsを更新する
         System.updateGoalProgress();
         System.updateLongTermProgress(); // 月間・年間の目標も最新値で更新する
     },
     getWeight() {
         const val = parseFloat(document.getElementById('cfgWeight').value);
         return !val || val <= 0 ? 65 : val;
+    },
+    getAge() {
+        const val = parseInt(document.getElementById('cfgAge').value, 10); // 年齢は整数として読み取る
+        return !val || val <= 0 ? 30 : val; // 未設定時は30歳を初期値とする
+    },
+    getHeight() {
+        const val = parseFloat(document.getElementById('cfgHeight').value); // 身長を数値として取得する
+        return !val || val <= 0 ? 170 : val; // 未設定時は170cmを初期値とする
+    },
+    getSex() {
+        const val = document.getElementById('cfgSex').value; // 性別の選択値を取得する
+        return val || 'unspecified'; // 未選択時は未指定として扱う
+    },
+    getJumpHeight() {
+        const val = document.getElementById('cfgJumpHeight').value; // ジャンプ高さの選択値を取得する
+        return val || 'high'; // 未選択時は高いジャンプとして扱う
+    },
+    getIntervalEnabled() {
+        const el = document.getElementById('cfgIntervalEnabled'); // インターバル有効のチェックボックスを取得する
+        return !!(el && el.checked); // チェック状態を真偽値で返す
+    },
+    getIntervalWorkSec() {
+        const val = parseInt(document.getElementById('cfgIntervalWorkSec').value, 10); // ワーク秒数を取得する
+        if(!val || val <= 0) return 60; // 未設定時は60秒を初期値とする
+        return Math.min(600, Math.max(10, val)); // 10〜600秒に丸める
+    },
+    getIntervalRestSec() {
+        const val = parseInt(document.getElementById('cfgIntervalRestSec').value, 10); // レスト秒数を取得する
+        if(!val || val < 0) return 30; // 未設定時は30秒を初期値とする
+        return Math.min(600, Math.max(0, val)); // 0〜600秒に丸める
+    },
+    getIntervalRestRatio() {
+        const val = parseFloat(document.getElementById('cfgIntervalRestRatio').value); // レスト強度倍率を取得する
+        if(!val || val <= 0) return 0.6; // 未設定時は0.6を初期値とする
+        return Math.min(0.9, Math.max(0.3, val)); // 0.3〜0.9に丸める
     },
     getMonthTarget() {
         const val = parseFloat(document.getElementById('cfgMonthTarget').value); // 月間目標体重の入力値を取得する
@@ -1050,6 +1220,7 @@ const Shop = {
 };
 
 Config.load();
+System.refreshMets(); // 設定読み込み後にMETs補正を反映する
 System.render();
 System.updateGoalProgress();
 System.updateLongTermProgress(); // 起動時に月間・年間の進捗を初期表示する
