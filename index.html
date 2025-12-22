@@ -164,6 +164,8 @@
                         </div>
                         <!-- 1日の消費カロリー目標の進捗メッセージ -->
                         <p id="goalMotivation" class="text-xs font-bold text-slate-400 tracking-[0.3em] uppercase mt-4">カロリー目標を設定してください</p>
+                        <!-- インターバル時の残りセット数を表示する -->
+                        <p id="goalSetsRemaining" class="text-xs font-bold text-slate-400 tracking-[0.3em] uppercase mt-2"></p>
                     </div>
                     <!-- 手動で消費カロリーを追加する折り畳みブロック -->
                     <details class="group">
@@ -292,7 +294,7 @@
                     </div>
                     <div class="space-y-2">
                         <!-- 性別選択のラベル -->
-                        <label class="text-sm font-bold text-slate-500">性別</label>
+                        <label for="cfgSex" class="text-sm font-bold text-slate-500">性別</label>
                         <!-- 性別は選択式で入力ミスを減らす -->
                         <select id="cfgSex" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
                             <option value="unspecified">未指定</option>
@@ -304,7 +306,7 @@
                 <!-- ジャンプ高さを設定してMETs補正を反映する -->
                 <div class="space-y-2">
                     <!-- ジャンプ高さのラベル -->
-                    <label class="text-sm font-bold text-slate-500">ジャンプ高さ</label>
+                    <label for="cfgJumpHeight" class="text-sm font-bold text-slate-500">ジャンプ高さ</label>
                     <!-- ジャンプ高さは選択式で入力ミスを減らす -->
                     <select id="cfgJumpHeight" class="w-full p-5 bg-slate-50 rounded-2xl font-black text-blue-600 outline-none text-2xl">
                         <option value="high">高いジャンプ (5cm〜)</option>

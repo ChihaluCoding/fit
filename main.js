@@ -4,6 +4,7 @@ const System = {
     baseMets: 8.8, // 補正前のMETsを保持して再計算に使う
     baseBpm: 110, // 補正前のBPMを保持して再計算に使う
     intervalPhase: 'work', // インターバルの現在フェーズを保持する
+    currentWorkSeconds: 0, // ワーク経過時間を保持して表示計算に使う
     timer: null, rhythm: null, audio: null,
     logs: JSON.parse(localStorage.getItem('stridex_infinity_final')) || [],
     pb: parseFloat(localStorage.getItem('stridex_pb')) || 0,
@@ -93,9 +94,8 @@ const System = {
         if(phase === 'rest') { // レストフェーズ時の処理を行う
             const ratio = Config.getIntervalRestRatio(); // 休憩時の強度倍率を取得する
             const restMets = Math.max(1, parseFloat((workMets * ratio).toFixed(1))); // 休憩時のMETsを算出する
-            const restBpm = Math.max(60, Math.round(this.baseBpm * ratio)); // 休憩時のBPMを算出する
             this.mets = restMets; // 休憩時のMETsを反映する
-            this.bpm = restBpm; // 休憩時のBPMを反映する
+            this.bpm = this.baseBpm; // 休憩時でもBPM表示は固定する
         } else {
             this.mets = workMets; // ワーク時のMETsを反映する
             this.bpm = this.baseBpm; // ワーク時のBPMを反映する
@@ -175,6 +175,7 @@ const System = {
                 workSeconds = (cycles * workSec) + Math.min(remainder, workSec); // ワーク経過時間を合計する
             }
         }
+        this.currentWorkSeconds = workSeconds; // ワーク経過時間を状態として保持する
         const m = Math.floor(workSeconds / 60).toString().padStart(2, '0'); // ワーク経過時間から分を算出する
         const s = Math.floor(workSeconds % 60).toString().padStart(2, '0'); // ワーク経過時間から秒を算出する
         document.getElementById('timer').textContent = `${m}:${s}`; // 休憩を除いた時間を表示する
@@ -202,7 +203,10 @@ const System = {
         }
         
         const weight = parseFloat(document.getElementById('cfgWeight').value) || Config.getWeight() || 65; // 体重は設定値を優先して取得する
-        const kcal = this.calculateKcal(workSeconds, weight).toFixed(1); // ワーク時間に基づく消費カロリーを算出する
+        const workMets = this.getAdjustedMets(this.baseMets, this.baseBpm); // ワーク時のMETsを取得する
+        const kcal = Config.getIntervalEnabled()
+            ? this.calculateKcalWithMets(workSeconds, weight, workMets).toFixed(1) // 休憩中もワーク基準でカロリーを固定する
+            : this.calculateKcal(workSeconds, weight).toFixed(1); // 通常時は現在のMETsで計算する
         const kcalVal = parseFloat(kcal);
         document.getElementById('liveKcal').innerText = kcal;
         document.getElementById('liveJumps').innerText = Math.floor(workSeconds * (this.bpm / 60)); // 休憩中はカウントを進めない
@@ -223,11 +227,14 @@ const System = {
         return (10 * safeWeight) + (6.25 * safeHeight) - (5 * safeAge) + sexFactor; // Mifflin-St Jeor式でBMRを算出する
     },
     calculateKcal(seconds, weight) {
+        return this.calculateKcalWithMets(seconds, weight, this.mets); // 現在のMETsを使って消費カロリーを算出する
+    },
+    calculateKcalWithMets(seconds, weight, mets) {
         const height = Config.getHeight(); // 設定の身長を取得する
         const age = Config.getAge(); // 設定の年齢を取得する
         const sex = Config.getSex(); // 設定の性別を取得する
         const bmr = this.calculateBmr(weight, height, age, sex); // 基礎代謝を算出する
-        const hourly = (bmr / 24) * this.mets; // METsを掛けた1時間あたりの消費量に変換する
+        const hourly = (bmr / 24) * mets; // METsを掛けた1時間あたりの消費量に変換する
         return hourly * (seconds / 3600) * 1.05; // 補正係数を加味した総消費カロリーを返す
     },
 
@@ -677,11 +684,13 @@ const System = {
         const summaryEl = document.getElementById('goalSummary'); // 目標サマリー表示を取得する
         const barEl = document.getElementById('goalProgressBar'); // 進捗バー要素を取得する
         const motivationEl = document.getElementById('goalMotivation'); // 進捗メッセージ要素を取得する
+        const setsEl = document.getElementById('goalSetsRemaining'); // セット残数の表示要素を取得する
         if(!summaryEl || !barEl || !motivationEl) return; // DOMが無い場合は処理しない
         if(!target) {
             summaryEl.innerText = "-- / -- kcal"; // 目標未設定時のプレースホルダーを表示する
             barEl.style.width = "0%"; // 進捗バーは空にする
             motivationEl.innerText = "カロリー目標を設定してください"; // ガイドメッセージを表示する
+            if(setsEl) setsEl.innerText = ""; // 目標未設定時はセット表示を空にする
             return;
         }
         const completed = this.getTodayTotal(); // 今日の消費カロリー合計を取得する
@@ -693,6 +702,28 @@ const System = {
         motivationEl.innerText = total >= target
             ? "ターゲット達成！"
             : `あと ${(target - total).toFixed(1)} kcal`;
+        if(setsEl) { // セット残数の表示がある場合のみ更新する
+            if(!Config.getIntervalEnabled()) { // インターバルがオフなら表示しない
+                setsEl.innerText = ""; // オフ時は空表示にする
+                return;
+            }
+            const workSec = Config.getIntervalWorkSec(); // ワーク時間を取得する
+            const weight = Config.getWeight(); // 体重設定値を取得する
+            const workMets = this.getAdjustedMets(this.baseMets, this.baseBpm); // ワーク時のMETsを取得する
+            const perSetKcal = this.calculateKcalWithMets(workSec, weight, workMets); // 1セット分の消費カロリーを算出する
+            if(!perSetKcal || perSetKcal <= 0) { // 算出不能時は保護する
+                setsEl.innerText = "消費カロリー達成まであと--セット"; // 不明時の表示を行う
+                return;
+            }
+            const completedSets = Math.floor(this.currentWorkSeconds / workSec); // 完了したワークセット数を算出する
+            const activeForSets = this.calculateKcalWithMets(completedSets * workSec, weight, workMets); // 完了セット分の消費カロリーを算出する
+            const totalForSets = completed + activeForSets; // セット換算での合計カロリーを算出する
+            const remaining = Math.max(0, target - totalForSets); // 目標までの残りカロリーを算出する
+            const sets = remaining <= 0 ? 0 : Math.ceil(remaining / perSetKcal); // 必要セット数を切り上げで求める
+            setsEl.innerText = remaining <= 0
+                ? "消費カロリー目標は達成済み"
+                : `消費カロリー達成まであと${sets}セット`; // 残りセット数を表示する
+        }
     },
     getMonthId(dateInput) {
         const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput; // 文字列とDateを統一して扱う
@@ -878,17 +909,17 @@ const Config = {
     getIntervalWorkSec() {
         const val = parseInt(document.getElementById('cfgIntervalWorkSec').value, 10); // ワーク秒数を取得する
         if(!val || val <= 0) return 60; // 未設定時は60秒を初期値とする
-        return Math.min(600, Math.max(10, val)); // 10〜600秒に丸める
+        return Math.min(600, Math.max(10, val)); // 10-600秒に丸める
     },
     getIntervalRestSec() {
         const val = parseInt(document.getElementById('cfgIntervalRestSec').value, 10); // レスト秒数を取得する
         if(!val || val < 0) return 30; // 未設定時は30秒を初期値とする
-        return Math.min(600, Math.max(0, val)); // 0〜600秒に丸める
+        return Math.min(600, Math.max(0, val)); // 0-600秒に丸める
     },
     getIntervalRestRatio() {
         const val = parseFloat(document.getElementById('cfgIntervalRestRatio').value); // レスト強度倍率を取得する
         if(!val || val <= 0) return 0.6; // 未設定時は0.6を初期値とする
-        return Math.min(0.9, Math.max(0.3, val)); // 0.3〜0.9に丸める
+        return Math.min(0.9, Math.max(0.3, val)); // 0.3-0.9に丸める
     },
     getMonthTarget() {
         const val = parseFloat(document.getElementById('cfgMonthTarget').value); // 月間目標体重の入力値を取得する
