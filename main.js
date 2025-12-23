@@ -1,13 +1,34 @@
 // System logic remains identical as requested
-const JST_OFFSET_MS = 9 * 60 * 60 * 1000; // 日本時間のオフセットをミリ秒で定義する
+const JAPAN_TIMEZONE = 'Asia/Tokyo'; // 日本時間のタイムゾーンIDを定義する
+const JAPAN_WEEKDAY_MAP = { // 日本語の曜日表記を数値へ変換するマップ
+    '日': 0, // 日曜日
+    '月': 1, // 月曜日
+    '火': 2, // 火曜日
+    '水': 3, // 水曜日
+    '木': 4, // 木曜日
+    '金': 5, // 金曜日
+    '土': 6  // 土曜日
+};
+const JAPAN_PARTS_FORMATTER = new Intl.DateTimeFormat('ja-JP', { // 日本時間の年月日を安定取得するフォーマッタ
+    timeZone: JAPAN_TIMEZONE, // 日本時間に固定する
+    year: 'numeric', // 年を取得する
+    month: '2-digit', // 月を2桁で取得する
+    day: '2-digit', // 日を2桁で取得する
+    weekday: 'short' // 曜日も取得する
+});
 const getJapanDateParts = (dateInput = new Date()) => { // 日本時間基準の年月日情報を取得する
     const baseDate = typeof dateInput === 'string' ? new Date(dateInput) : dateInput; // 文字列はDateへ変換する
-    const shifted = new Date(baseDate.getTime() + JST_OFFSET_MS); // UTCに対して日本時間分だけ進める
+    const parts = JAPAN_PARTS_FORMATTER.formatToParts(baseDate); // 日本時間の各パーツを取得する
+    const partMap = parts.reduce((acc, part) => { // パーツを種類ごとの連想配列にまとめる
+        if(part.type !== 'literal') acc[part.type] = part.value; // literal以外のみ採用する
+        return acc; // 集計結果を返す
+    }, {}); // 空のオブジェクトから開始する
+    const weekdayValue = partMap.weekday || ''; // 曜日表記を取得する
     return { // 日本時間の年月日と曜日を返す
-        year: shifted.getUTCFullYear(), // 日本時間の年を返す
-        month: shifted.getUTCMonth(), // 日本時間の月(0始まり)を返す
-        day: shifted.getUTCDate(), // 日本時間の日付を返す
-        weekday: shifted.getUTCDay() // 日本時間の曜日(0=日)を返す
+        year: parseInt(partMap.year, 10), // 日本時間の年を数値で返す
+        month: parseInt(partMap.month, 10) - 1, // 日本時間の月(0始まり)を返す
+        day: parseInt(partMap.day, 10), // 日本時間の日付を返す
+        weekday: JAPAN_WEEKDAY_MAP[weekdayValue] ?? 0 // 日本時間の曜日(0=日)を返す
     };
 };
 const buildDateKey = (year, monthIndex, day) => { // 年月日からYYYY-MM-DDキーを生成する

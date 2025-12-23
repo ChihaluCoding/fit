@@ -48,8 +48,45 @@
         // 日付キーと体重を紐付けるマップを保持する
         let logMap = buildLogMap(logs);
 
+        // 日本時間のタイムゾーンIDを定義する
+        const JAPAN_TIMEZONE = 'Asia/Tokyo';
+        // 日本時間の年月日を安定して取得するフォーマッタを用意する
+        const JAPAN_PARTS_FORMATTER = new Intl.DateTimeFormat('ja-JP', {
+            timeZone: JAPAN_TIMEZONE, // 日本時間に固定する
+            year: 'numeric', // 年を取得する
+            month: '2-digit', // 月を2桁で取得する
+            day: '2-digit' // 日を2桁で取得する
+        });
+        // 日本時間基準の年月日情報を取得する
+        function getJapanDateParts(dateInput = new Date()) {
+            const baseDate = typeof dateInput === 'string' ? new Date(dateInput) : dateInput; // 文字列はDateへ変換する
+            const parts = JAPAN_PARTS_FORMATTER.formatToParts(baseDate); // 日本時間の各パーツを取得する
+            const partMap = parts.reduce((acc, part) => {
+                if(part.type !== 'literal') acc[part.type] = part.value; // literal以外のみ採用する
+                return acc; // 集計結果を返す
+            }, {});
+            return {
+                year: parseInt(partMap.year, 10), // 日本時間の年を数値で返す
+                month: parseInt(partMap.month, 10) - 1, // 日本時間の月(0始まり)を返す
+                day: parseInt(partMap.day, 10) // 日本時間の日付を返す
+            };
+        }
+        // 年月日からYYYY-MM-DDキーを生成する
+        function buildDateKey(year, monthIndex, day) {
+            const yyyy = String(year).padStart(4, '0'); // 年を4桁に整形する
+            const mm = String(monthIndex + 1).padStart(2, '0'); // 月を2桁に整形する
+            const dd = String(day).padStart(2, '0'); // 日を2桁に整形する
+            return `${yyyy}-${mm}-${dd}`; // YYYY-MM-DD形式で返す
+        }
+        // 日本時間で日付キーを生成する
+        function getJapanDateKey(dateInput = new Date()) {
+            const parts = getJapanDateParts(dateInput); // 日本時間の年月日を取得する
+            return buildDateKey(parts.year, parts.month, parts.day); // 日本時間のキーを返す
+        }
+
         // 表示対象の月を保持する
-        let currentDate = new Date();
+        const todayParts = getJapanDateParts(); // 日本時間の本日を取得する
+        let currentDate = new Date(todayParts.year, todayParts.month, todayParts.day); // 日本時間の当日を基準にする
 
         // ログ配列から日付マップを作成する
         function buildLogMap(sourceLogs) {
@@ -66,7 +103,7 @@
 
         // 今日の設定体重を更新する
         function syncConfigWeightIfToday(dateKey, weightValue) {
-            const todayKey = new Date().toISOString().split('T')[0]; // 今日の日付キーを取得する
+            const todayKey = getJapanDateKey(); // 今日の日付キーを日本時間で取得する
             if(dateKey !== todayKey) return; // 今日以外は設定体重を更新しない
             const cfg = JSON.parse(localStorage.getItem('stridex_config')) || {}; // 既存設定を取得する
             cfg.weight = weightValue; // 設定体重を最新の入力値に更新する
@@ -96,8 +133,8 @@
             }
 
             for(let day = 1; day <= lastDay; day++) {
-                const dateObj = new Date(year, month, day);
-                const iso = dateObj.toISOString().split('T')[0];
+                const dateObj = new Date(year, month, day); // 描画対象の日付を生成する
+                const iso = buildDateKey(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()); // 日本時間基準のキーを作成する
                 const weight = logMap[iso];
                 const editLabel = weight ? '編集' : '記録'; // 体重がある場合は編集、無い場合は記録と表示する
                 const editButton = `<button type="button" data-edit-date="${iso}" class="text-[0.6rem] font-black uppercase tracking-[0.3em] text-blue-600 hover:text-blue-800">${editLabel}</button>`; // 体重入力の編集ボタンを作る
@@ -126,8 +163,8 @@
             const lastDay = new Date(year, month + 1, 0).getDate();
             const points = [];
             for(let day = 1; day <= lastDay; day++) {
-                const dateObj = new Date(year, month, day);
-                const iso = dateObj.toISOString().split('T')[0];
+                const dateObj = new Date(year, month, day); // 描画対象の日付を生成する
+                const iso = buildDateKey(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()); // 日本時間基準のキーを作成する
                 const weight = logMap[iso];
                 if(weight !== undefined) {
                     points.push({ day, weight: parseFloat(weight) });
