@@ -1,4 +1,32 @@
 // System logic remains identical as requested
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000; // 日本時間のオフセットをミリ秒で定義する
+const getJapanDateParts = (dateInput = new Date()) => { // 日本時間基準の年月日情報を取得する
+    const baseDate = typeof dateInput === 'string' ? new Date(dateInput) : dateInput; // 文字列はDateへ変換する
+    const shifted = new Date(baseDate.getTime() + JST_OFFSET_MS); // UTCに対して日本時間分だけ進める
+    return { // 日本時間の年月日と曜日を返す
+        year: shifted.getUTCFullYear(), // 日本時間の年を返す
+        month: shifted.getUTCMonth(), // 日本時間の月(0始まり)を返す
+        day: shifted.getUTCDate(), // 日本時間の日付を返す
+        weekday: shifted.getUTCDay() // 日本時間の曜日(0=日)を返す
+    };
+};
+const buildDateKey = (year, monthIndex, day) => { // 年月日からYYYY-MM-DDキーを生成する
+    const yyyy = String(year).padStart(4, '0'); // 年を4桁に整形する
+    const mm = String(monthIndex + 1).padStart(2, '0'); // 月を2桁に整形する
+    const dd = String(day).padStart(2, '0'); // 日を2桁に整形する
+    return `${yyyy}-${mm}-${dd}`; // YYYY-MM-DD形式で返す
+};
+const getJapanDateKey = (dateInput = new Date()) => { // 日本時間で日付キーを生成する
+    const parts = getJapanDateParts(dateInput); // 日本時間の年月日を取得する
+    return buildDateKey(parts.year, parts.month, parts.day); // 日本時間のキーを返す
+};
+const getJapanDateKeyWithOffset = (days, baseDate = new Date()) => { // 日本時間の基準日から日数をずらしたキーを返す
+    const parts = getJapanDateParts(baseDate); // 日本時間の基準日を取得する
+    const baseUtc = Date.UTC(parts.year, parts.month, parts.day); // 日本時間日付のUTC基準時刻を作る
+    const targetUtc = baseUtc + (days * 86400000); // 日数分をミリ秒で加減算する
+    const target = new Date(targetUtc); // 対象日のUTC基準Dateを作成する
+    return buildDateKey(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate()); // YYYY-MM-DDキーを生成する
+};
 const System = {
     isRunning: false, ms: 0, mets: 8.8, bpm: 110,
     baseMets: 8.8, // 補正前のMETsを保持して再計算に使う
@@ -19,10 +47,10 @@ const System = {
     lastMonthBonus: localStorage.getItem('stridex_last_month_bonus') || null, // 最終月間ボーナス付与月
     sessionXpEarned: 0, // セッション内で獲得済みのXPを追跡して重複加算を防ぐ
     sessionLevelRef: 1, // セッション開始時のレベルを保持して計算を安定させる
-    lastUiDate: localStorage.getItem('stridex_ui_date') || new Date().toISOString().split('T')[0], // 画面更新で使用する日付キーを保持する
+    lastUiDate: localStorage.getItem('stridex_ui_date') || getJapanDateKey(), // 画面更新で使用する日付キーを保持する
 
     getTodayKey() { // 今日の日付キーを生成する
-        return new Date().toISOString().split('T')[0]; // ISO形式のYYYY-MM-DDを返す
+        return getJapanDateKey(); // 日本時間のYYYY-MM-DDを返す
     },
 
     syncDayRollover(force = false) { // 日付変更を検知して画面状態を更新する
@@ -263,7 +291,7 @@ const System = {
         const kcal = parseFloat(document.getElementById('liveKcal').innerText);
         if (kcal < 0.5) return;
         
-        const log = { id: Date.now(), date: new Date().toISOString().split('T')[0], kcal };
+        const log = { id: Date.now(), date: getJapanDateKey(), kcal }; // 日本時間のキーで記録する
         this.logs.unshift(log);
         localStorage.setItem('stridex_infinity_final', JSON.stringify(this.logs));
         
@@ -317,10 +345,8 @@ const System = {
 
         const heat = document.getElementById('heatmap');
         heat.innerHTML = "";
-        const today = new Date();
-        for (let i = 0; i < 28; i++) {
-            const d = new Date(); d.setDate(today.getDate() - (27 - i));
-            const iso = d.toISOString().split('T')[0];
+        for (let i = 0; i < 28; i++) { // 直近28日分のヒートマップを描画する
+            const iso = getJapanDateKeyWithOffset(i - 27); // 日本時間基準で日付キーを作る
             const count = this.logs.filter(l => l.date === iso).length;
             const div = document.createElement('div');
             div.className = "h-6 rounded-[6px]";
@@ -426,21 +452,16 @@ const System = {
         return Math.max(0, this.xpBoostActiveUntil - Date.now()); // 残り時間を計算する
     },
 
-    getWeekKey(dateInput) {
-        const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-        const monday = new Date(d);
-        const day = monday.getDay();
-        const diff = (day === 0 ? -6 : 1) - day;
-        monday.setDate(monday.getDate() + diff);
-        monday.setHours(0,0,0,0);
-        return monday.toISOString().split('T')[0];
+    getWeekKey(dateInput) { // 週の開始日キーを日本時間で取得する
+        const parts = getJapanDateParts(dateInput); // 日本時間の曜日情報を取得する
+        const day = parts.weekday; // 日本時間の曜日を使う
+        const diff = (day === 0 ? -6 : 1) - day; // 月曜日基準の差分日数を算出する
+        return getJapanDateKeyWithOffset(diff, dateInput); // 日本時間の週キーを返す
     },
 
-    getMonthKey(dateInput) {
-        const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-        const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
-        monthStart.setHours(0,0,0,0);
-        return monthStart.toISOString().split('T')[0];
+    getMonthKey(dateInput) { // 月初のキーを日本時間で取得する
+        const parts = getJapanDateParts(dateInput); // 日本時間の年月を取得する
+        return buildDateKey(parts.year, parts.month, 1); // 月初日のキーを日本時間で返す
     },
 
     applyStreakBonus(todayKey) {
@@ -573,7 +594,7 @@ const System = {
                 const value = parseFloat(input.value);
                 if(!value) return;
                 const weightLogs = JSON.parse(localStorage.getItem('stridex_weight_logs')) || []; // 既存の体重ログを取得する
-                const today = new Date().toISOString().split('T')[0]; // 今日の日付キーを作成する
+                const today = getJapanDateKey(); // 今日の日付キーを日本時間で作成する
                 const existingIndex = weightLogs.findIndex(log => log.date === today); // 今日の記録があるか探す
                 if(existingIndex >= 0) {
                     weightLogs[existingIndex].weight = value; // 既に今日の記録があれば上書きする
@@ -611,10 +632,8 @@ const System = {
                     if(!acc[log.date]) acc[log.date] = log.weight; // 同日の記録が複数あっても最初の値を優先する
                     return acc;
                 }, {}); // 日付と体重のマップを作成する
-                const todayKey = new Date().toISOString().split('T')[0]; // 今日の日付キーを取得する
-                const yesterday = new Date(); // 昨日の日付を生成する
-                yesterday.setDate(yesterday.getDate() - 1); // 1日前に戻す
-                const yesterdayKey = yesterday.toISOString().split('T')[0]; // 昨日の日付キーを取得する
+                const todayKey = getJapanDateKey(); // 今日の日付キーを日本時間で取得する
+                const yesterdayKey = getJapanDateKeyWithOffset(-1); // 昨日の日付キーを日本時間で取得する
                 const todayWeight = logMap[todayKey]; // 今日の体重を取得する
                 const yesterdayWeight = logMap[yesterdayKey]; // 昨日の体重を取得する
                 // 今日・昨日の表示は日付キーで取得した結果を使う
@@ -791,9 +810,8 @@ const System = {
         const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput; // 文字列とDateを統一して扱う
         return `${d.getFullYear()}`; // 年キーを返す
     },
-    formatDateKey(dateInput) {
-        const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput; // 日付入力をDateに統一する
-        return d.toISOString().split('T')[0]; // 保存形式に合わせてYYYY-MM-DDを返す
+    formatDateKey(dateInput) { // 保存用の日付キーを日本時間で整形する
+        return getJapanDateKey(dateInput); // 日本時間のYYYY-MM-DDを返す
     },
     getPeriodStartDate(periodType, dateInput = new Date()) {
         const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput; // 文字列とDateを統一して扱う
@@ -858,7 +876,7 @@ const System = {
         const rawValue = parseFloat(input.value); // 入力値を数値として解釈する
         if(!rawValue || rawValue <= 0) return; // 不正値は追加しない
         const kcal = Math.round(rawValue * 10) / 10; // 小数1桁に丸めて記録する
-        const today = new Date().toISOString().split('T')[0]; // 追加対象の日付キーを取得する
+        const today = getJapanDateKey(); // 追加対象の日付キーを日本時間で取得する
         const log = { id: Date.now(), date: today, kcal }; // 手動追加分のログを作成する
         this.logs.unshift(log); // 先頭に追加して最新ログとして扱う
         localStorage.setItem('stridex_infinity_final', JSON.stringify(this.logs)); // ログを保存する
